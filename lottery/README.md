@@ -1,7 +1,7 @@
 ## Trustless Investment Smart Contract
 
 <p align="center">
-<img src="https://github.com/dggventures/syndicate/blob/master/tari/images/tari-workflow.png" 
+<img src="https://github.com/dggventures/syndicate/blob/master/lottery/images/Lottery.png" 
 alt="DG Global Ventures" width="573" height="309" border="0" align="center" margin-left="10%" />
 </p>
 
