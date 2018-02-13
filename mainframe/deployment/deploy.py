@@ -18,7 +18,7 @@ contract = eth.contract(contract_abi, bytecode=("0x" + contract_bin))
 def trans():
   return {"from": "0x54d9249c776c56520a62faecb87a00e105e8c9dc", "gas": 800000, "gasPrice": 3000000000}
 
-dHash = contract.deploy(transaction=trans(0,0))
+dHash = contract.deploy(transaction=trans())
 
 def receipt(tx_hash):
   return eth.getTransactionReceipt(tx_hash)
