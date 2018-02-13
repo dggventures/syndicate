@@ -79,7 +79,7 @@ contract WibsonInvestment is Ownable {
     uint major_fee = leftover * 6 / 10;
     // The minor fee is 40% * value = (4 / 10) * value
     // However, we send it as the rest of the received ether.
-    uint minor_fee = transfer_amount - target_amount - major_fee;
+    uint minor_fee = leftover - major_fee;
 
     // Send the major fee
     require(major_partner_address.call.gas(gas).value(major_fee)());
