@@ -161,8 +161,9 @@ contract Syndicate is Ownable {
         for (uint i = 0; i < admins.length; i++) {
             if (admins[i].addr == msg.sender) {
                 require(admins[i].fee_balance > 0);
+                uint admin_fee_balance = admins[i].fee_balance
                 admins[i].fee_balance = 0;
-                msg.sender.transfer(admins[i].fee_balance);
+                msg.sender.transfer(admin_fee_balance);
             }
         }
     }
