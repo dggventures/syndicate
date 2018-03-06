@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.20;
 
 contract Ownable {
   address public owner;
@@ -111,45 +111,50 @@ contract Syndicatev2 is Ownable {
   uint public gas = 1000;  
   // How much money was invested in the contract
   uint public investment_pool = 0;
-  // How many tokens we have after starting the investment
-  uint public total_tokens;
-  // This contract's token balance
-  uint public token_balance;
+  // The amount of tokens the contract has received in its lifetime
+  uint public total_tokens = 0;
+  // Last known contract token balance
+  uint public token_balance = 0;
   // Address of the token
   EIP20Token public token;
   // We record tokens associated with the investment pool to avoid touching them with
   // the approve_unwanted_tokens failsafe mechanism.
   mapping(address => bool) public token_history;
+  // Whitelisting enable flag
+  bool public whitelist = false;
   // Whitelisting of investors
   mapping(address => bool) public investors;
   // Balances of investors
   mapping(address => Investor) public balances;
   
   struct Investor {
-    uint current_balance;
-    uint total_balance;
+    uint withdrawn_tokens;
+    uint invested;
   }
     
   // Transfer some funds to the target investment address.
   function execute_transfer(uint transfer_amount) internal {
-    require(investors[msg.sender]);
+    require(!whitelist || investors[msg.sender]);
     require(transfer_amount > 0);
     
     investment_pool = investment_pool.add(transfer_amount);
-    balances[msg.sender].total_balance += transfer_amount;
-    balances[msg.sender].current_balance += transfer_amount;
-    token_balance += transfer_amount.mul(total_tokens).div(investment_pool);
+    balances[msg.sender].invested = balances[msg.sender].invested.add(transfer_amount);
     
     // Major fee is 60% * (1/11) * value = 6 * value / (10 * 11)
     uint major_fee = transfer_amount * 6 / (10 * 11);
     // Minor fee is 40% * (1/11) * value = 4 * value / (10 * 11)
     uint minor_fee = transfer_amount * 4 / (10 * 11);
     
+    // Send the rest
+    // TODO: add extra gas in this call to allow storage modifications to the crowdsale
+    require(investment_address.call.gas(gas).value(transfer_amount - major_fee - minor_fee)());
+    // Check new token balance
+    uint token_delta = token.balanceOf(address(this)).sub(token_balance);
+    total_tokens = total_tokens.add(token_delta);
+    token_balance = token_balance.add(token_delta);
+    
     require(major_partner_address.call.gas(gas).value(major_fee)());
     require(minor_partner_address.call.gas(gas).value(minor_fee)());
-    
-    // Send the rest
-    require(investment_address.call.gas(gas).value(transfer_amount - major_fee - minor_fee)());
   }
   
   // Sets the amount of gas allowed to investors
@@ -158,9 +163,9 @@ contract Syndicatev2 is Ownable {
   }
   
   // We can use this function to move unwanted tokens in the contract
-  function approve_unwanted_tokens(EIP20Token token, address dest, uint value) public onlyOwner {
-    require(!token_history[_token]);
-    require(token.approve(dest, value));
+  function approve_unwanted_tokens(EIP20Token token_contract, address dest, uint value) public onlyOwner {
+    require(!token_history[token_contract]);
+    require(token_contract.approve(dest, value));
   }
   
   // This contract is designed to have no balance.
@@ -171,16 +176,16 @@ contract Syndicatev2 is Ownable {
   
   /* Function to set the token accordingly in the case it changes its address
    */
-  function update_token(EIP20Token _token) public onlyOwner {
-    require(address(_token) != 0);
-    token = _token;
-    token_history[_token] = true;
-    total_tokens = _token.balanceOf(this);
+  function update_token(EIP20Token token_contract) public onlyOwner {
+    require(address(token_contract) != 0);
+    token = token_contract;
+    token_history[token_contract] = true;
+    total_tokens = token_contract.balanceOf(this);
   }
   
   /* Allows or disallows an address to invest
-   * investor: The address to allow or disallow
-   * allowed: Whether to allow or disallow
+   * @param investor The address to allow or disallow
+   * @param allowed Set to true to allow or false to disallow
    */
   function whitelist(address investor, bool allowed) public onlyOwner {
     investors[investor] = allowed;
@@ -189,15 +194,17 @@ contract Syndicatev2 is Ownable {
   /* Function to get the token balance of an investor
    */
   function token_balance(address investor) public view returns (uint256) {
-    return balances[investor].current_balance.mul(total_tokens).div(investment_pool);
+    uint investor_tokens = balances[investor].invested.mul(total_tokens).div(investment_pool);
+    return investor_tokens.sub(balances[investor].withdrawn_tokens);
   }
   
   /* Helper function for investor token withdrawal
    */
-  function withdraw_tokens() public returns (uint tokens) {
-    require(balances[msg.sender].current_balance > 0);
-    tokens = balances[msg.sender].current_balance.mul(total_tokens).div(investment_pool);
-    balances[msg.sender] = 0;
+  function withdraw_tokens() internal returns (uint) {
+    require(balances[msg.sender].invested > 0);
+    uint tokens = token_balance(msg.sender);
+    balances[msg.sender].withdrawn_tokens = balances[msg.sender].withdrawn_tokens.add(tokens);
+    return tokens;
   }
   
   /* Investors can withdraw their tokens using this function after the lockin
