@@ -158,9 +158,9 @@ contract Syndicatev2 is Ownable {
   }
   
   // We can use this function to move unwanted tokens in the contract
-  function approve_unwanted_tokens(EIP20Token token, address dest, uint value) public onlyOwner {
+  function approve_unwanted_tokens(EIP20Token _token, address dest, uint value) public onlyOwner {
     require(!token_history[_token]);
-    require(token.approve(dest, value));
+    require(_token.approve(dest, value));
   }
   
   // This contract is designed to have no balance.
@@ -194,10 +194,10 @@ contract Syndicatev2 is Ownable {
   
   /* Helper function for investor token withdrawal
    */
-  function withdraw_tokens() public returns (uint tokens) {
+  function withdraw_tokens() internal returns (uint tokens) {
     require(balances[msg.sender].current_balance > 0);
     tokens = balances[msg.sender].current_balance.mul(total_tokens).div(investment_pool);
-    balances[msg.sender] = 0;
+    balances[msg.sender].current_balance = 0;
   }
   
   /* Investors can withdraw their tokens using this function after the lockin
