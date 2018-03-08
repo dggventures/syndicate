@@ -1,4 +1,4 @@
-#!/home/horacio/web3py-env/bin/python3 -i
+#!/usr/bin/env python3
 
 import sys
 print(sys.version)
@@ -14,7 +14,8 @@ from eth_utils import keccak, to_checksum_address
 
 web3 = Web3(HTTPProvider('http://localhost:7999'))
 eth = web3.eth
-accounts = eth.accounts
+#accounts = eth.accounts
+deployer_address = "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc"
 address_log_path = "./address_log"
 
 contract_name = "PinProtocolInvestment"
@@ -30,13 +31,14 @@ with open("./build/" + contract_name + ".bin") as contract_bin_file:
 def generate_contract_address(address, nonce):
   return to_checksum_address('0x' + keccak(rlp.encode([bytes(bytearray.fromhex(address[2:])), nonce]))[-20:].hex())
 
-deployer_nonce = web3.eth.getTransactionCount(accounts[0])
-contract_address = generate_contract_address(accounts[0], deployer_nonce)
+# Beware, if there are pending transactions this nonce may not be the correct one.
+deployer_nonce = web3.eth.getTransactionCount(deployer_address)
+contract_address = generate_contract_address(deployer_address, deployer_nonce)
 
 # contract instance creation
 contract = web3.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
 
-deployment_tx = {"from": eth.accounts[0], "gas": 50000000, "gasPrice": 20000000000}
+deployment_tx = {"from": deployer_address, "gas": 500000, "gasPrice": 3000000000}
 
 def receipt(tx_hash):
   return eth.getTransactionReceipt(tx_hash)
