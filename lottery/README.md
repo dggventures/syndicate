@@ -13,4 +13,4 @@ The Smart Contract was specially developed to implement this logic and it doesn'
 
 ### Smart Contract Deployment
 
-https://etherscan.io/address/0xad739df5b0ad62f927dd2b58d350c8ee5ea0c89d
+https://etherscan.io/address/0xc64c437e7f953111619b220d5a579542be0efb5e
