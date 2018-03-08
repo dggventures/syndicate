@@ -14,3 +14,7 @@ The Smart Contract was specially developed to implement this logic and it doesn'
 ### Smart Contract Deployment
 
 https://etherscan.io/address/0xc64c437e7f953111619b220d5a579542be0efb5e
+
+### Tokens
+
+The tokens are distributed directly to investors
