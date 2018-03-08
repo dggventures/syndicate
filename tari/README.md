@@ -14,3 +14,7 @@ The Smart Contract was specially developed to implement this logic and it doesn'
 ### Smart Contract Deployment
 
 https://etherscan.io/address/0xad739df5b0ad62f927dd2b58d350c8ee5ea0c89d
+
+### Tokens
+
+The tokens are distributed by TARI directly to the investors
