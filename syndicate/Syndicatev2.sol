@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.19;
 
 contract Ownable {
   address public owner;
@@ -102,11 +102,11 @@ library SafeMath {
 contract Syndicatev2 is Ownable {
   using SafeMath for uint;  
   // Address of the target contract
-  address public investment_address; // 0x77D0f9017304e53181d9519792887E78161ABD25;
+  address public investment_address;
   // Major partner address
-  address public major_partner_address; // 0x8f0592bDCeE38774d93bC1fd2c97ee6540385356;
+  address public major_partner_address;
   // Minor partner address
-  address public minor_partner_address; // 0xC787C3f6F75D7195361b64318CE019f90507f806;
+  address public minor_partner_address;
   // Gas used for transfers.
   uint public gas = 1000;  
   // How much money was invested in the contract
