@@ -102,11 +102,11 @@ library SafeMath {
 contract Syndicatev2 is Ownable {
   using SafeMath for uint;  
   // Address of the target contract
-  address public investment_address = 0x77D0f9017304e53181d9519792887E78161ABD25;
+  address public investment_address; // 0x77D0f9017304e53181d9519792887E78161ABD25;
   // Major partner address
-  address public major_partner_address = 0x8f0592bDCeE38774d93bC1fd2c97ee6540385356;
+  address public major_partner_address; // 0x8f0592bDCeE38774d93bC1fd2c97ee6540385356;
   // Minor partner address
-  address public minor_partner_address = 0xC787C3f6F75D7195361b64318CE019f90507f806;
+  address public minor_partner_address; // 0xC787C3f6F75D7195361b64318CE019f90507f806;
   // Gas used for transfers.
   uint public gas = 1000;  
   // How much money was invested in the contract
@@ -131,7 +131,14 @@ contract Syndicatev2 is Ownable {
     uint withdrawn_tokens;
     uint invested;
   }
-    
+  
+  function Syndicatev2(EIP20Token token_contract, address investment, address major_partner, address minor_partner) public {
+    token = token_contract;
+    investment_address = investment;
+    major_partner_address = major_partner;
+    minor_partner_address = minor_partner;
+  }
+
   // Transfer some funds to the target investment address.
   function execute_transfer(uint transfer_amount) internal {
     require(!whitelist || investors[msg.sender]);
