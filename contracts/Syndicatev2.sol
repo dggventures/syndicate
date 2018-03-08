@@ -180,9 +180,16 @@ contract Syndicatev2 is Ownable {
     require(address(token_contract) != 0);
     token = token_contract;
     token_history[token_contract] = true;
-    total_tokens = token_contract.balanceOf(this);
   }
-  
+
+  /* Function to update the token balance of this contract
+   */
+  function update_balances() public onlyOwner {
+    uint token_delta = token.balanceOf(address(this)).sub(token_balance);
+    total_tokens = total_tokens.add(token_delta);
+    token_balance = token_balance.add(token_delta);
+  }
+
   /* Allows or disallows an address to invest
    * @param investor The address to allow or disallow
    * @param allowed Set to true to allow or false to disallow
@@ -204,6 +211,7 @@ contract Syndicatev2 is Ownable {
     require(balances[msg.sender].invested > 0);
     uint tokens = token_balance(msg.sender);
     balances[msg.sender].withdrawn_tokens = balances[msg.sender].withdrawn_tokens.add(tokens);
+    token_balance = token_balance.sub(tokens);
     return tokens;
   }
   
