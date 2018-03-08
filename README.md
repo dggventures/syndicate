@@ -42,10 +42,12 @@ NOTE: If this function is not called after 10 days from the end of the locking p
 
 (*) Some implementation changes are expected but they will not change the general functionality of the Smart Contract
 
-## Contracts
+## Coming Soon
 
-+ Syndicate.sol - Main contract
-+ Ownable.sol - Allows making privileged calls to the contract by the contract owner
-+ SafeMath.sol - Overflow checked math functions for integers
-+ EIP20Token.sol - EIP20 Token interface
+- Implement ERC20 or ERC721 to provide liquidity to investors while the tokens are frozen. They will be able to sell the future possession of the tokens.
+
+## Syndicated ICOs
+
+These are the ICOs where we participate with our technology:
+
 
