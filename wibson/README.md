@@ -13,4 +13,5 @@ https://etherscan.io/address/0x17e5629660c3ee2ac68498e24e8607a712ba64ff
 
 ### Tokens
 
-They will be distributed by Pin Protocol.
+We will deploy a new smart contract after Wibson's smart contract is available to allow investors withdraw their tokens after the vesting periods end.
+
