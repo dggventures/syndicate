@@ -42,7 +42,7 @@ NOTE: If this function is not called after 10 days from the end of the locking p
 ## Case Studies
 
 These are the ICOs where we participate with our technology:
-<a src="https://github.com/dggventures/syndicate/tree/master/mainframe">Mainframe</a>
+<a href="https://github.com/dggventures/syndicate/tree/master/mainframe">Mainframe</a>
 
 
 
