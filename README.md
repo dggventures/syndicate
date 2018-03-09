@@ -43,12 +43,12 @@ NOTE: If this function is not called after 10 days from the end of the locking p
 
 These are the ICOs where we participate with our technology:
 
-<a href="https://github.com/dggventures/syndicate/tree/master/mainframe">Mainframe</a>
-<a href="https://github.com/dggventures/syndicate/tree/master/human-protocol">Human Protocol</a>
-<a href="https://github.com/dggventures/syndicate/tree/master/lottery">Lottery</a>
-<a href="https://github.com/dggventures/syndicate/tree/master/tari">TARI</a>
-<a href="https://github.com/dggventures/syndicate/tree/master/wibson">Wibson</a>
-<a href="https://github.com/dggventures/syndicate/tree/master/pin-protocol">Pin Protocol</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/mainframe">Mainframe</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/human-protocol">Human Protocol</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/lottery">Lottery</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/tari">TARI</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/wibson">Wibson</a>
+- <a href="https://github.com/dggventures/syndicate/tree/master/pin-protocol">Pin Protocol</a>
 
 
 
