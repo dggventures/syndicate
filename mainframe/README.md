@@ -17,4 +17,4 @@ https://etherscan.io/address/0x75298d365092dcecab1dae51b257b972d34f0323
 
 ### Tokens
 
-We will deploy a new smart contract to allow investors withdraw the tokens after the vesting periods end.
+We will deploy a new smart contract after Mainframe's smart contract is available to allow investors withdraw the tokens after the vesting periods end.
