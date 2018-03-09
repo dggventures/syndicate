@@ -5,7 +5,7 @@
 alt="DG Global Ventures" width="573" height="309" border="0" align="center" margin-left="10%" />
 </p>
 
-Mainframe send their ethers to our smart contract and the smart contract distribute the money within the same transaction. If the transaction fails, the money is not transfered. When it succeed, the ethers are transfered to Mainframe's address (0x213E52B799bf99B2436EE492f7e2dFA184e790ab) while administration fees are deducted.
+Investors send their ethers to our smart contract and the smart contract distribute the money within the same transaction. If the transaction fails, the money is not transfered. When it succeed, the ethers are transfered to Mainframe's address (0x213E52B799bf99B2436EE492f7e2dFA184e790ab) while administration fees are deducted.
 
 ### Smart Contract Deployment
 
