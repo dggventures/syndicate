@@ -5,7 +5,7 @@
 alt="DG Global Ventures" width="573" height="309" border="0" align="center" margin-left="10%" />
 </p>
 
-Mainframe investment Smart Contract was developed to secure investors' money. Investors send their ethers to the smart contract. After collecting all the investments, DGGV (DG Global Ventures) sends a transaction to transfer the funds to Mainframe address (0x33efc5120d99a63bdf990013ecabbd6c900803ce) and transfer administration fees.
+Mainframe investment Smart Contract was developed to secure investors' money. Investors send their ethers to the smart contract. After collecting all the investments, DGGV (DG Global Ventures) sends a transaction to transfer the funds to Mainframe address (0x213E52B799bf99B2436EE492f7e2dFA184e790ab) and transfer administration fees.
 
 ### Investment Insurance
 
@@ -17,4 +17,4 @@ https://etherscan.io/address/0x75298d365092dcecab1dae51b257b972d34f0323
 
 ### Tokens
 
-We will deploy a new smart contract to allow investors withdraw the tokens after the vesting periods end.
+We will deploy a new smart contract after Mainframe's smart contract is available to allow investors withdraw the tokens after the vesting periods end.
