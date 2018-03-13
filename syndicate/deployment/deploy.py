@@ -34,11 +34,11 @@ miner.start(1)
 # Deployment of StandardToken
 
 # Get Token ABI
-with open("../build/CrowdsaleToken.abi") as contract_abi_file:
+with open("../build/StandardToken.abi") as contract_abi_file:
 	token_abi = json.load(contract_abi_file)
 
 # Get Token Bytecode
-with open("../build/CrowdsaleToken.bin") as contract_bin_file:
+with open("../build/StandardToken.bin") as contract_bin_file:
 	token_bytecode = '0x' + contract_bin_file.read()
 
 nonce_token = web3.eth.getTransactionCount(sender_account)

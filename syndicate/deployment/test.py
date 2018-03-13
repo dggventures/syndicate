@@ -23,6 +23,22 @@ withdraw_tokens_approve = testing_helpers.withdraw_tokens_approve
 withdraw_tokens_transfer = testing_helpers.withdraw_tokens_transfer
 
 
-miner.stop()
 
-# Testing start
+
+# Testing start ---------------------------------------------------
+
+# Set transfer gas
+print("\nSetting transfer gas...\n")
+if (1 == set_transfer_gas(1200)):
+	print("\nSuccess!\n")
+else:
+	print("Transfer gas not set")
+
+
+wait()
+
+
+
+
+
+miner.stop()
