@@ -11,7 +11,7 @@ alt="CoinFabrik" width="250" height="64" border="0" align="right" />
 ## Syndicate Investment Fund Smart Contract
 
 ## Overview
-The Syndicate Smart Contract was developed to receive investments to buy ICO tokens, buy the tokens negotiating a bonus price for the whole amount of Ethers, and finally, investors receive the ICO tokens after the lock period while administrators get a bonus if the tokens increase their original value more than 2X.
+The Syndicate Smart Contract template was developed to receive investments to buy ICO tokens, buy the tokens negotiating a bonus price for the whole amount of Ethers, and finally, investors receive the ICO tokens within the contract. Depending on the project, vesting could apply for the tokens.
   
 <p align="center">
 <img src="https://github.com/dggventures/syndicate/blob/master/images/syndicate-workflow.png" 
@@ -32,7 +32,7 @@ alt="DG Global Ventures" width="681" height="417" border="0" align="center" marg
 1) Investors send their Ethers to the Syndicate Smart Contract.
 2) Contract Developer calls a function of the Syndicate Smart Contract to buy the tokens from the ICO Smart Contract specifying the starting token price which will be the base to calculate the bonus fee. 1% of the Ethers are sent to the administrators. 
 NOTE: If this function is not called after the buy period (30 days), investors can withdraw the ethers including the administration fee.
-3) After the lock period (1 year), Contract Developer will call the end of locking function specifying the token price at the end of the period (CoinMarketCap price at the 0:00 EST after 1 year exactly after the token purchase). After this call, investors can withdraw their tokens subtracting the bonus fee. The bonus fee (20% over 2X of the original price) is paid if the token value increases above 2 times the original value (e.g.: if the token price was original $10 and after one year is $25, bonus fee will be ($25-2*$10)*0.2 = $1 per token). This bonus is paid in tokens. 
+3) After each vesting period (if applies), Contract Developer will call the end of locking function specifying the token price at the end of the period (CoinMarketCap price at the 0:00 EST after 1 year exactly after the token purchase). After this call, investors can withdraw their tokens subtracting the bonus fee. The bonus fee (20% over 2X of the original price) is paid if the token value increases above 2 times the original value (e.g.: if the token price was original $10 and after one year is $25, bonus fee will be ($25-2*$10)*0.2 = $1 per token). This bonus is paid in tokens. 
 NOTE: If this function is not called after 10 days from the end of the locking period, investors can withdraw tokens without paying the bonus fee. 
 
 ## (*) Functions:
@@ -42,10 +42,12 @@ NOTE: If this function is not called after 10 days from the end of the locking p
 
 (*) Some implementation changes are expected but they will not change the general functionality of the Smart Contract
 
-## Contracts
+## Coming Soon
 
-+ Syndicate.sol - Main contract
-+ Ownable.sol - Allows making privileged calls to the contract by the contract owner
-+ SafeMath.sol - Overflow checked math functions for integers
-+ EIP20Token.sol - EIP20 Token interface
+- Implement ERC20 or ERC721 to provide liquidity to investors while the tokens are frozen. They will be able to sell the future possession of the tokens.
+
+## Syndicated ICOs
+
+These are the ICOs where we participate with our technology:
+
 

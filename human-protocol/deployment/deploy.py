@@ -12,13 +12,13 @@ from datetime import datetime
 import rlp
 from eth_utils import keccak, to_checksum_address
 
-web3 = Web3(HTTPProvider('http://localhost:7999'))
+web3 = Web3(HTTPProvider('http://localhost:8545'))
 eth = web3.eth
 #accounts = eth.accounts
 deployer_address = "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc"
-address_log_path = "./address_log"
+#address_log_path = "./address_log"
 
-contract_name = "PinProtocolInvestment"
+contract_name = "HumanProtocolInvestment"
 
 # Get contract ABI
 with open("./build/" + contract_name + ".abi") as contract_abi_file:
