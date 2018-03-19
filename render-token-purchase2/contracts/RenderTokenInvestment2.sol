@@ -50,7 +50,7 @@ interface EIP20Token {
 
 
 // The owner of this contract should be an externally owned account
-contract RenderTokenInvestment2 is Ownable {
+contract RenderTokenPurchase2 is Ownable {
 
   // Address of the target contract
   address public investment_address = 0x46dda95DEf0ddD0d9F6829352dB2622f27Fe5da7;
