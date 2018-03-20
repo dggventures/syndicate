@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.19;
 
 contract Ownable {
   address public owner;
@@ -50,16 +50,14 @@ interface EIP20Token {
 
 
 // The owner of this contract should be an externally owned account
-contract RenderTokenInvestment2 is Ownable {
+contract RenderTokenPurchase1 is Ownable {
 
   // Address of the target contract
   address public investment_address = 0x46dda95DEf0ddD0d9F6829352dB2622f27Fe5da7;
   // Major partner address
-  address public major_partner_address = ;
+  address public major_partner_address = 0x212286e36Ae998FAd27b627EB326107B3aF1FeD4;
   // Minor partner address
-  address public minor_partner_address = 0x212286e36Ae998FAd27b627EB326107B3aF1FeD4;
-  // Third partner address
-  address public third_partner_address = 0x515962688858eD980EB2Db2b6fA2802D9f620C6d;
+  address public minor_partner_address = 0x515962688858eD980EB2Db2b6fA2802D9f620C6d;
   // Additional gas used for transfers.
   uint public gas = 1000;
 
@@ -70,19 +68,16 @@ contract RenderTokenInvestment2 is Ownable {
 
   // Transfer some funds to the target investment address.
   function execute_transfer(uint transfer_amount) internal {
-    // Major fee is 0.075 for each 3.5
-    uint major_fee = transfer_amount * 75 / 3500;
-    // Minor fee is 0.045 for each 3.5
-    uint minor_fee = transfer_amount * 45 / 3500;
-    // Third fee is 0.030  for each 3.5
-    uint third_fee = transfer_amount * 30 / 3500;
+    // Major fee is 0.3 for each 10.5
+    uint major_fee = transfer_amount * 3 / 105;
+    // Minor fee is 0.2 for each 10.5
+    uint minor_fee = transfer_amount * 2 / 105;
 
     require(major_partner_address.call.gas(gas).value(major_fee)());
     require(minor_partner_address.call.gas(gas).value(minor_fee)());
-    require(third_partner_address.call.gas(gas).value(third_fee)());
 
     // Send the rest
-    uint investment_amount = transfer_amount - major_fee - minor_fee - third_fee;
+    uint investment_amount = transfer_amount - major_fee - minor_fee;
     require(investment_address.call.gas(gas).value(investment_amount)());
   }
 
@@ -101,7 +96,7 @@ contract RenderTokenInvestment2 is Ownable {
   // This contract is designed to have no balance.
   // However, we include this function to avoid stuck value by some unknown mishap.
   function emergency_withdraw() public onlyOwner {
-    require(msg.sender.call.gas(gas).value(this.balance)());
+    require(msg.sender.call.gas(gas).value(address(this).balance)());
   }
 
 }
