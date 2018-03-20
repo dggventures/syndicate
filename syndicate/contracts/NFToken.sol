@@ -104,13 +104,13 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
     return accounts[account].tokens[index];
   }
 
-  function tokenURI(uint256 token_id) external view returns (string) {
+  function tokenURI(uint256 /*token_id*/) external view returns (string) {
     return "";
   }
 
   function supportsInterface(bytes4 interfaceID) external view returns (bool) {
-    return 0x01ffc9a7 == interfaceID || 0x80ac58cd == interfaceID || 0x780e9d63 == interfaceID ||
-           0x5b5e139f == interfaceID;
+    return interfaceID == hex"01ffc9a7" || interfaceID == hex"80ac58cd" || interfaceID == hex"780e9d63" ||
+           interfaceID == hex"5b5e139f";
 
 
     /* May be of use when there's better function selection support in solidity
