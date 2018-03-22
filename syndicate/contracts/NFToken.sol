@@ -157,28 +157,33 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
     return accounts[account].tokens[index];
   }
 
+  /// @dev You may wish to override this function to provide context sensitive URIs.
   function tokenURI(uint256 /*token_id*/) external view returns (string) {
     return "";
   }
 
-  function supportsInterface(bytes4 interfaceID) external view returns (bool) {
-    return interfaceID == hex"01ffc9a7" || interfaceID == hex"80ac58cd" ||
-           interfaceID == hex"780e9d63" || interfaceID == hex"5b5e139f";
+  /// @notice Query whether a contract implements an interface
+  /// @param interface_id The interface identifier, as specified in ERC-165
+  /// @return `true` if the contract implements `interface_id` and
+  ///  `interface_id` is not 0xffffffff, `false` otherwise
+  function supportsInterface(bytes4 interface_id) external view returns (bool) {
+    return interface_id == hex"01ffc9a7" || interface_id == hex"80ac58cd" ||
+           interface_id == hex"780e9d63" || interface_id == hex"5b5e139f";
 
 
     /* May be of use when there's better function selection support in solidity
-    return interfaceID == this.balanceOf.selector ^ this.ownerOf.selector ^
+    return interface_id == this.balanceOf.selector ^ this.ownerOf.selector ^
                           this.safeTransferFrom(address, address, uint256).selector ^
                           this.safeTransferFrom(address, address, uint256, bytes).selector ^
                           this.transferFrom.selector ^ this.approve.selector ^
                           this.setApprovalForAll.selector ^ this.getApproved.selector ^
                           this.isApprovedForAll.selector ||
-           interfaceID == this.name.selector ^ this.symbol.selector ^
+           interface_id == this.name.selector ^ this.symbol.selector ^
                           this.tokenURI.selector ||
-           interfaceID == this.totalSupply.selector ^
+           interface_id == this.totalSupply.selector ^
                           this.tokenByIndex.selector ^
                           this.tokenOfOwnerByIndex ||
-           interfaceID == this.supportsInterface.selector;
+           interface_id == this.supportsInterface.selector;
     */
   }
 
