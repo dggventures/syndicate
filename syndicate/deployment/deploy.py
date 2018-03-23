@@ -22,9 +22,9 @@ address_log_path = "../address_log"
 unlock.web3 = web3
 
 def wait():
-	block_number = web3.eth.blockNumber
-	while web3.eth.blockNumber <= (block_number + 2):
-		time.sleep(1)
+  block_number = web3.eth.blockNumber
+  while web3.eth.blockNumber <= (block_number + 2):
+    time.sleep(1)
 
 # Unlock accounts
 unlock.unlock()
@@ -35,11 +35,11 @@ miner.start(1)
 
 # Get Token ABI
 with open("../build/StandardToken.abi") as contract_abi_file:
-	token_abi = json.load(contract_abi_file)
+  token_abi = json.load(contract_abi_file)
 
 # Get Token Bytecode
 with open("../build/StandardToken.bin") as contract_bin_file:
-	token_bytecode = '0x' + contract_bin_file.read()
+  token_bytecode = '0x' + contract_bin_file.read()
 
 nonce_token = web3.eth.getTransactionCount(sender_account)
 token_address = generate_contract_address(sender_account, nonce_token)
@@ -58,11 +58,11 @@ wait()
 
 # Get Syndicatev2 ABI
 with open("../build/Syndicatev2.abi") as contract_abi_file:
-	syndicate_abi = json.load(contract_abi_file)
+  syndicate_abi = json.load(contract_abi_file)
 
 # Get Syndicatev2 Bytecode
 with open("../build/Syndicatev2.bin") as contract_bin_file:
-	syndicate_bytecode = '0x' + contract_bin_file.read()
+  syndicate_bytecode = '0x' + contract_bin_file.read()
 
 nonce_syndicate = web3.eth.getTransactionCount(sender_account)
 syndicate_address = generate_contract_address(sender_account, nonce_syndicate)
@@ -82,22 +82,22 @@ wait()
 
 # Write json file with Syndicatev2 contract's address if it's a test -------------------------
 if __name__ != '__main__':
-	deployment_name = input('\n\nEnter name of deployment: ')
-	
-	local_time = datetime.now()
-	
-	json_file_name = "Syndicatev2-Address" + '--' + local_time.strftime('%Y-%m-%d--%H-%M-%S') + '--' + deployment_name
-	
-	try:
-		if not os.path.exists(address_log_path):
-			os.makedirs(address_log_path)
-	except OSError as e:
-		if e.errno != errno.EEXIST:
-			raise
-	
-	# Writing configuration parameters into json file for logging purposes
-	file_path_name_w_ext = address_log_path + '/' + json_file_name + '.json'
-	address_for_file = {'syndicate_address': syndicate_address}
-	with open(file_path_name_w_ext, 'w') as fp:
-		json.dump(address_for_file, fp, sort_keys=True, indent=2)
+  deployment_name = input('\n\nEnter name of deployment: ')
+  
+  local_time = datetime.now()
+  
+  json_file_name = "Syndicatev2-Address" + '--' + local_time.strftime('%Y-%m-%d--%H-%M-%S') + '--' + deployment_name
+  
+  try:
+    if not os.path.exists(address_log_path):
+      os.makedirs(address_log_path)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
+      raise
+  
+  # Writing configuration parameters into json file for logging purposes
+  file_path_name_w_ext = address_log_path + '/' + json_file_name + '.json'
+  address_for_file = {'syndicate_address': syndicate_address}
+  with open(file_path_name_w_ext, 'w') as fp:
+    json.dump(address_for_file, fp, sort_keys=True, indent=2)
 # ------------------------------------------------------------------------------------------

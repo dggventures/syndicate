@@ -30,9 +30,9 @@ withdraw_tokens_transfer = testing_helpers.withdraw_tokens_transfer
 # Set transfer gas
 print("\nSetting transfer gas...\n")
 if (1 == set_transfer_gas(1200)):
-	print("\nSuccess!\n")
+  print("\nSuccess!\n")
 else:
-	print("Transfer gas not set")
+  print("Transfer gas not set")
 
 
 wait()
