@@ -12,7 +12,7 @@ from datetime import datetime
 import rlp
 from eth_utils import keccak, to_checksum_address
 
-web3 = Web3(HTTPProvider('http://pc12:8544'))
+web3 = Web3(HTTPProvider('http://localhost:8545'))
 eth = web3.eth
 deployer_address = "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc"
 #address_log_path = "./address_log"
