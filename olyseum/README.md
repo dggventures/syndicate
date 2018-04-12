@@ -1,7 +1,7 @@
 ## Trustless Investment Smart Contract
 
 <p align="center">
-<img src="https://github.com/dggventures/syndicate/blob/master/human-protocol/images/olyseum-workflow.png" 
+<img src="https://github.com/dggventures/syndicate/blob/master/olyseum/images/olyseum-workflow.png" 
 alt="DG Global Ventures" width="573" height="309" border="0" align="center" margin-left="10%" />
 </p>
 
