@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.22;
 pragma experimental "v0.5.0";
 
 import "./ERC165.sol";
@@ -22,6 +22,8 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   
   string public name = "";
   string public symbol = "";
+
+  event Minted(address indexed owner, uint256 token_id);
 
   /// @notice Get the amount of NFTs owned by an address
   /// @param account An address for whom to query the balance
@@ -185,6 +187,20 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
                           this.tokenOfOwnerByIndex ||
            interface_id == this.supportsInterface.selector;
     */
+  }
+
+  /// @dev Mint an NFT
+  /// @param receiver Address of the owner of the newly minted NFT
+  /// @returns Token ID
+  function mintInternal(address receiver) internal returns (uint){
+    uint token_id = total_tokens;
+    uint index = accounts[receiver].tokens.push(token_id) - 1;
+    tokens[token_id].index = index;
+    tokens[token_id].owner = receiver;
+    total_tokens += 1;
+    emit Minted(receiver, token_id);
+    emit Transfer(address(0), receiver, token_id);
+    return token_id;
   }
 
   modifier canTransfer(uint256 token_id) {
