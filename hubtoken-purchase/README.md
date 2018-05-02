@@ -1,4 +1,4 @@
-## Trustless Investment Smart Contract
+## Trustless Purchase Smart Contract
 
 <p align="center">
 <img src="https://github.com/dggventures/syndicate/blob/master/render-token-investment1/images/render-token-workflow.png" 

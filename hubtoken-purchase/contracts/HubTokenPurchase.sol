@@ -50,10 +50,10 @@ interface EIP20Token {
 
 
 // The owner of this contract should be an externally owned account
-contract HubTokenInvestment is Ownable {
+contract HubTokenPurchase is Ownable {
 
   // Address of the target contract
-  address public investment_address = 0xcc04AF825eEf340e99710D4366e3021F8d82F42A;
+  address public purchase_address = 0xcc04AF825eEf340e99710D4366e3021F8d82F42A;
   // Major partner address
   address public major_partner_address = 0x212286e36Ae998FAd27b627EB326107B3aF1FeD4;
   // Minor partner address
@@ -66,7 +66,7 @@ contract HubTokenInvestment is Ownable {
     execute_transfer(msg.value);
   }
 
-  // Transfer some funds to the target investment address.
+  // Transfer some funds to the target purchase address.
   function execute_transfer(uint transfer_amount) internal {
     // Major fee is 3 for each 105
     uint major_fee = transfer_amount * 3 / 105;
@@ -77,8 +77,8 @@ contract HubTokenInvestment is Ownable {
     require(minor_partner_address.call.gas(gas).value(minor_fee)());
 
     // Send the rest
-    uint investment_amount = transfer_amount - major_fee - minor_fee;
-    require(investment_address.call.gas(gas).value(investment_amount)());
+    uint purchase_amount = transfer_amount - major_fee - minor_fee;
+    require(purchase_address.call.gas(gas).value(purchase_amount)());
   }
 
   // Sets the amount of additional gas allowed to addresses called

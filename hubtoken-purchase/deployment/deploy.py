@@ -18,7 +18,7 @@ eth = web3.eth
 deployer_address = "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc"
 #address_log_path = "./address_log"
 
-contract_name = "HubTokenInvestment"
+contract_name = "HubTokenPurchase"
 
 # Get contract ABI
 with open("./build/" + contract_name + ".abi") as contract_abi_file:
@@ -59,7 +59,7 @@ def addAddress():
   
 def partners():
   partners = []
-  partners.append(contract.call().investment_address())
+  partners.append(contract.call().partner_address())
   partners.append(contract.call().major_partner_address())
   partners.append(contract.call().minor_partner_address())
   return partners
