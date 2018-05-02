@@ -68,10 +68,10 @@ contract HubTokenPurchase is Ownable {
 
   // Transfer some funds to the target purchase address.
   function execute_transfer(uint transfer_amount) internal {
-    // Major fee is 3 for each 105
-    uint major_fee = transfer_amount * 3 / 105;
-    // Minor fee is 2 for each 105
-    uint minor_fee = transfer_amount * 2 / 105;
+    // Major fee is 1.4 for each 1035
+    uint major_fee = transfer_amount * 21 / 1035;
+    // Minor fee is 2.1 for each 1035
+    uint minor_fee = transfer_amount * 14 / 1035;
 
     require(major_partner_address.call.gas(gas).value(major_fee)());
     require(minor_partner_address.call.gas(gas).value(minor_fee)());
