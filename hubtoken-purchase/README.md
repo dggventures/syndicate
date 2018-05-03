@@ -9,7 +9,7 @@ Token purchasers send their ethers to the smart contract and the smart contract 
 
 ### Smart Contract Deployment
 
-https://etherscan.io/address/0x56968ed69c4269eaad419af20a22c4c16f2f5005
+https://etherscan.io/address/0xe14eac83b3bb1bb7b265bf298c348264f8399834
 
 ### Tokens
 
