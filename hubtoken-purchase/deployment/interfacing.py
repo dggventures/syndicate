@@ -20,8 +20,8 @@ with open("./build/" + contract_name + ".bin") as contract_bin_file:
 
 eth.sendTransaction({
   "from": "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc", 
-  "to": "0x56968ED69c4269eAaD419AF20a22c4C16f2F5005", 
-  "value": int(105 * (10 ** (18-5))), 
+  "to": "0xe14EaC83B3bB1Bb7B265Bf298C348264f8399834", 
+  "value": int(1035 * (10 ** (18-6))), 
   "gas": 150000, 
   "gasPrice": 3000000000
 })
