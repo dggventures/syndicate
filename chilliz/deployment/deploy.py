@@ -22,7 +22,7 @@ with open("./build/" + contract_name + ".bin") as contract_bin_file:
 # contract instance creation
 contract = web3.eth.contract(abi=contract_abi, bytecode=contract_bytecode)
 
-deployment_tx = { "from": deployer_address, "gas": 600000, "gasPrice": web3.toWei(12, "gwei") }
+deployment_tx = { "from": deployer_address, "gas": 500000, "gasPrice": web3.toWei(7, "gwei") }
 
 d_hash = contract.deploy(transaction=deployment_tx)
   
