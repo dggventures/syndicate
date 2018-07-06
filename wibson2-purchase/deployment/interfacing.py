@@ -19,6 +19,6 @@ web3.eth.sendTransaction({
   "from": "0x54d9249C776C56520A62faeCB87A00E105E8c9Dc", 
   "to": "0xBAcF8282704CB4Db50F2459Db29f2e3C7cF181D8", 
   "value": web3.toWei(0.1, "milliether"), 
-  "gas": 100000, 
-  "gasPrice": web3.toWei(50, "gwei")
+  "gas": 150000,
+  "gasPrice": web3.toWei(55, "gwei")
 })
