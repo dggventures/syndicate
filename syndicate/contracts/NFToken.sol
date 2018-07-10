@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity ^0.4.24;
 pragma experimental "v0.5.0";
 
 import "./ERC165.sol";
@@ -20,10 +20,22 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   mapping(uint256 => Token) tokens;
   mapping(address => Account) accounts;
   
-  string public name = "";
-  string public symbol = "";
+  // string public name = "";
+  // string public symbol = "";
 
   event Minted(address indexed owner, uint256 token_id);
+  
+  // TODO: Review implementation
+  /// @notice A descriptive name for a collection of NFTs in this contract
+  function name() external pure returns (string) {
+    return "";
+  }
+
+  // TODO: Review implementation
+  /// @notice An abbreviated name for NFTs in this contract
+  function symbol() external pure returns (string) {
+    return "";
+  }
 
   /// @notice Get the amount of NFTs owned by an address
   /// @param account An address for whom to query the balance
@@ -35,7 +47,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @notice Find the owner of an NFT
   /// @param token_id The identifier for an NFT
   /// @return The address of the owner of the NFT
-  function ownerOf(uint256 token_id) external view validIndex(token_id) returns (address) {
+  function ownerOf(uint256 token_id) public view validIndex(token_id) returns (address) {
     return tokens[token_id].owner;
   }
 
@@ -78,7 +90,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   function commitTransfer(address from, address to, uint256 token_id) private 
   validAddress(to) validIndex(token_id) canTransfer(token_id) {
     // Verify ownership of the token
-    require(from == tokens[token_id].owner)
+    require(from == tokens[token_id].owner);
 
     // Overwrite with last element before shortening array
     uint256[] storage from_tokens = accounts[from].tokens;
@@ -128,7 +140,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @notice Get the approved address for a single NFT
   /// @param token_id The NFT to find the approved address for
   /// @return The approved address for this NFT, or the zero address if there is none
-  function getApproved(uint256 token_id) external view validIndex(index) returns (address) {
+  function getApproved(uint256 token_id) external view validIndex(token_id) returns (address) {
     return tokens[token_id].approved_agent;
   }
 
@@ -191,7 +203,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
 
   /// @dev Mint an NFT
   /// @param receiver Address of the owner of the newly minted NFT
-  /// @returns Token ID
+  /// @return Token ID
   function mintInternal(address receiver) internal returns (uint){
     uint token_id = total_tokens;
     uint index = accounts[receiver].tokens.push(token_id) - 1;
