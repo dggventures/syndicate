@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.24;
 
 /// @title ERC-721 Non-Fungible Token Standard
 /// @dev See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
@@ -33,7 +33,7 @@ contract ERC721 /* is ERC165 */ {
   /// @dev NFTs assigned to zero address are considered invalid, and queries
   ///  about them do throw.
   /// @return The address of the owner of the NFT
-  function ownerOf(uint256 _tokenId) external view returns (address);
+  function ownerOf(uint256 _tokenId) public view returns (address);
 
   /// @notice Transfers the ownership of an NFT from one address to another address
   /// @dev Throws unless `msg.sender` is the current owner, an authorized
