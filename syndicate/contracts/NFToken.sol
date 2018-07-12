@@ -94,8 +94,13 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
 
     // Overwrite with last element before shortening array
     uint256[] storage from_tokens = accounts[from].tokens;
-    from_tokens[tokens[token_id].index] = from_tokens[from_tokens.length - 1];
+    uint256 last_token_id = from_tokens[from_tokens.length - 1];
+    uint256 last_token_new_index = tokens[token_id].index;
+    from_tokens[last_token_new_index] = last_token_id;
     from_tokens.length -= 1;
+
+    // Update the last token's index in its owner array.
+    tokens[last_token_id].index = last_token_new_index;
 
     // Update token ownership information
     tokens[token_id].index = accounts[to].tokens.push(token_id) - 1;
