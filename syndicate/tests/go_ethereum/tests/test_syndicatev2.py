@@ -9,6 +9,16 @@ import os
 from client_config import config_f
 
 
+ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
+
+@pytest.fixture
+def crowdsale_path():
+  return os.path.abspath("../../../../../../ICOSample/ICOSample/deployment/build")
+
+@pytest.fixture
+def address_zero():
+  return ADDRESS_ZERO
+
 @pytest.fixture
 def config():
   return config_f()
@@ -30,11 +40,10 @@ def crowdsale():
   return Contract()
 
 @pytest.fixture
-def deployed_crowdsale(crowdsale, wait, owner, config):
+def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
   def inner_deployed_crowdsale():
-    crowdsale_path = os.path.abspath("../../../../../../ICOSample/ICOSample/deployment/build")
     tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
-    wait(tx_hash)
+    assert status(tx_hash)
     tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
                                                                   config["start_time"],
                                                                   config["end_time"],
@@ -45,15 +54,18 @@ def deployed_crowdsale(crowdsale, wait, owner, config):
                                                                   config["token_decimals"],
                                                                   config["max_tokens_to_sell"]
                                                                   ).transact(tx_args(owner, gas=6000000))
-    wait(tx_hash)
+    assert status(tx_hash)
     return crowdsale
   return inner_deployed_crowdsale
 
 @pytest.fixture
-def deploy(wait, owner):
+def deploy(owner, address_zero):
   def inner_deploy(contract, contract_name, gas, deployed_crowdsale):
     crowdsale = deployed_crowdsale()
     token_address = crowdsale.contract.functions.token().call()
+    assert token_address != address_zero
+    assert crowdsale.contract.address != address_zero
+    print(crowdsale.contract.address)
     tx_hash = contract.deploy("../../build/",
                               contract_name,
                               tx_args(owner, gas=gas),
@@ -61,7 +73,6 @@ def deploy(wait, owner):
                               crowdsale.contract.address,
                               "0x8ffC991Fc4C4fC53329Ad296C1aFe41470cFFbb3",
                               "0x1B91518648F8f153CE954a18d53BeF5047e39c73")
-    wait(tx_hash)
     return tx_hash
   return inner_deploy
 
@@ -82,19 +93,43 @@ def set_transfer_gas(status, deploy, syndicatev2, deployed_crowdsale):
   return inner_set_transfer_gas
 
 @pytest.fixture
-def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, get_tx_receipt):
+def contract_from_address(web3_2, crowdsale_path):
+  def inner_contract_from_address(address):
+    contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(crowdsale_path, "Crowdsale")
+    contract = web3_2.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
+    return contract
+  return inner_contract_from_address
+
+@pytest.fixture
+def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, get_tx_receipt, contract_from_address):
   def inner_get_balance():
     deploy(syndicatev2, "Syndicatev2", 3000000, deployed_crowdsale)
-    tx_hash = syndicatev2.contract.functions.whitelist(web3_2.eth.accounts[0], True).transact(tx_args(owner, gas=900000))
+    tx_hash = syndicatev2.contract.functions.whitelist(owner, True).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": web3_2.eth.accounts[0],
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    crowdsale_address = syndicatev2.contract.functions.purchase_address().call()
+    print(crowdsale_address)
+    crowdsale_contract = contract_from_address(crowdsale_address)
+    tx_hash = crowdsale_contract.functions.setEarlyParticipantWhitelist(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    tx_hash = crowdsale_contract.functions.setEarlyParticipantWhitelist(owner, True).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    assert crowdsale_contract.functions.earlyParticipantWhitelist(syndicatev2.contract.address).call()
+    assert crowdsale_contract.functions.earlyParticipantWhitelist(owner).call()
+    tx_hash = web3_2.eth.sendTransaction({"from": owner,
+                                          "to": crowdsale_address,
+                                          "value": web3_2.toWei(20, "ether"),
+                                          "gas": 9000000})
+    assert status(tx_hash)
+    tx_hash = web3_2.eth.sendTransaction({"from": owner,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(5, "ether"),
-                                          "gas": 30000})
-    print(get_tx_receipt(tx_hash).gasUsed)
+                                          "value": web3_2.toWei(20, "ether"),
+                                          "gas": 9000000})
+    print("\nGasUsed:", get_tx_receipt(tx_hash).gasUsed)
     assert status(tx_hash)
     balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
-    print(balance)
+    print("\nBalance:", balance)
     return balance
   return inner_get_balance
 
