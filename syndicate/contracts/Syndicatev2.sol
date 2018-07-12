@@ -138,55 +138,55 @@ contract Ownable {
 contract Syndicatev2 is Haltable, NFToken {
   using SafeMath for uint;  
   // Address of the target contract
-  address public investment_address;
+  address public purchase_address;
   // Major partner address
   address public major_partner_address;
   // Minor partner address
   address public minor_partner_address;
   // Gas used for transfers.
   uint public gas = 1000;  
-  // How much money was invested in the contract
-  uint public investment_pool = 0;
+  // How much money was purchased in the contract
+  uint public purchase_pool = 0;
   // The amount of tokens the contract has received in its lifetime
   uint public total_tokens = 0;
   // Last known contract token balance
   uint public token_balance = 0;
   // Address of the token
   EIP20Token public token;
-  // We record tokens associated with the investment pool to avoid touching them with
+  // We record tokens associated with the purchase pool to avoid touching them with
   // the approve_unwanted_tokens failsafe mechanism.
   mapping(address => bool) public token_history;
   // Whitelisting enable flag
   bool public enforce_whitelist = false;
-  // Whitelisting of investors
-  mapping(address => Investor) public investors;
-  // Balances of investment tokens (dictionary: token |--> investment)
-  mapping(uint => Investment) public balances;
+  // Whitelisting of purchasers
+  mapping(address => Purchaser) public purchasers;
+  // Balances of purchase tokens (dictionary: token |--> purchase)
+  mapping(uint => Purchase) public balances;
 
-  struct Investor {
+  struct Purchaser {
     bool whitelisted;
     uint token_id;
   }
 
-  struct Investment {
+  struct Purchase {
     uint withdrawn_tokens;
-    uint invested;
+    uint purchased;
   }
 
-  constructor(EIP20Token token_contract, address investment, address major_partner, address minor_partner) public {
+  constructor(EIP20Token token_contract, address purchase, address major_partner, address minor_partner) public {
     update_token(token_contract);
-    investment_address = investment;
+    purchase_address = purchase;
     major_partner_address = major_partner;
     minor_partner_address = minor_partner;
   }
 
-  // Transfer some funds to the target investment address.
+  // Transfer some funds to the target purchase address.
   function execute_transfer(uint transfer_amount, uint token_id) internal {
-    require(!enforce_whitelist || investors[msg.sender].whitelisted);
+    require(!enforce_whitelist || purchasers[msg.sender].whitelisted);
     require(transfer_amount > 0);
 
-    investment_pool = investment_pool.add(transfer_amount);
-    balances[token_id].invested = balances[token_id].invested.add(transfer_amount);
+    purchase_pool = purchase_pool.add(transfer_amount);
+    balances[token_id].purchased = balances[token_id].purchased.add(transfer_amount);
 
     // Major fee is 60% * (1/11) * value = 6 * value / (10 * 11)
     uint major_fee = transfer_amount * 6 / (10 * 11);
@@ -195,7 +195,7 @@ contract Syndicatev2 is Haltable, NFToken {
 
     // Send the rest
     // TODO: add extra gas in this call to allow storage modifications to the crowdsale
-    require(investment_address.call.gas(gas).value(transfer_amount - major_fee - minor_fee)());
+    require(purchase_address.call.gas(gas).value(transfer_amount - major_fee - minor_fee)());
 
     // Check new token balance
     update_balances();
@@ -204,18 +204,19 @@ contract Syndicatev2 is Haltable, NFToken {
     require(minor_partner_address.call.gas(gas).value(minor_fee)());
   }
 
-  /* Get NFT for this investor.
+  /* Get NFT for this purchaser.
    * Mints a new NFT if sender has no token
    */
    function get_token_id() internal returns (uint) {
-    uint token_id = investors[msg.sender].token_id;
-    if (msg.sender != ownerOf(token_id))
-    return mintInternal(msg.sender);
-    else
-    return token_id;
+    uint token_id = purchasers[msg.sender].token_id;
+    if (msg.sender != ownerOf(token_id)) {
+      uint id = mintInternal(msg.sender);
+      purchasers[msg.sender].token_id = id;
+      return id;
+    } else return token_id;
   }
 
-  // Sets the amount of gas allowed to investors
+  // Sets the amount of gas allowed to purchasers
   function set_transfer_gas(uint transfer_gas) public onlyOwner {
     gas = transfer_gas;
   }
@@ -251,31 +252,32 @@ contract Syndicatev2 is Haltable, NFToken {
   }
 
   /* Allows or disallows an address to invest
-   * @param investor The address to allow or disallow
+   * @param purchaser The address to allow or disallow
    * @param allowed Set to true to allow or false to disallow
    */
-   function whitelist(address investor, bool allowed) public onlyOwner {
-    investors[investor].whitelisted = allowed;
+   function whitelist(address purchaser, bool allowed) public onlyOwner {
+    purchasers[purchaser].whitelisted = allowed;
   }
 
-  /* Function to get the token balance of an investor
+  /* Function to get the token balance of a purchaser
   */
   function get_token_balance(uint token_id) public view returns (uint) {
-    uint investor_tokens = balances[token_id].invested.mul(total_tokens).div(investment_pool);
-    return investor_tokens.sub(balances[token_id].withdrawn_tokens);
+    uint purchaser_tokens = balances[token_id].purchased.mul(total_tokens).div(purchase_pool);
+    return purchaser_tokens.sub(balances[token_id].withdrawn_tokens);
   }
-  /* Helper function for investor token withdrawal
+
+  /* Helper function for purchaser token withdrawal
   */
   function withdraw_tokens() internal returns (uint) {
     uint token_id = get_token_id();
-    require(balances[token_id].invested > 0);
+    require(balances[token_id].purchased > 0);
     uint tokens = get_token_balance(token_id);
     balances[token_id].withdrawn_tokens = balances[token_id].withdrawn_tokens.add(tokens);
     token_balance = token_balance.sub(tokens);
     return tokens;
   }
   
-  /* Investors can withdraw their tokens using this function
+  /* Purchasers can withdraw their tokens using this function
   */
   function withdraw_tokens_transfer() public {
     uint tokens = withdraw_tokens();
