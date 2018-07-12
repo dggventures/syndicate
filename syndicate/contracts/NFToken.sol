@@ -94,7 +94,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
 
     // Overwrite with last element before shortening array
     uint256[] storage from_tokens = accounts[from].tokens;
-    uint256 last_token_id = from_tokens[from_tokens.length - 1]
+    uint256 last_token_id = from_tokens[from_tokens.length - 1];
     uint256 last_token_new_index = tokens[token_id].index;
     from_tokens[last_token_new_index] = last_token_id;
     from_tokens.length -= 1;
