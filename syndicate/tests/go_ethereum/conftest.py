@@ -14,6 +14,7 @@ from eth_utils import (
 
 from web3 import Web3
 from web3.auto import w3
+from web3.middleware import geth_poa_middleware
 
 import tests.go_ethereum.common
 
@@ -155,6 +156,7 @@ def web3(ipc_file, geth_process):
 
 @pytest.fixture(scope=WEB3_SCOPE)
 def web3_2():
+  w3.middleware_stack.inject(geth_poa_middleware, layer=0)
   return w3
 
 @pytest.fixture(scope=WEB3_SCOPE)
