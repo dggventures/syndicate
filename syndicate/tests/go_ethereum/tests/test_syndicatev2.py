@@ -87,7 +87,7 @@ def set_transfer_gas(status, deploy, syndicatev2, deployed_crowdsale):
   def inner_set_transfer_gas(current_owner):
     gas = 200000
     deploy(syndicatev2, "Syndicatev2", 5000000, deployed_crowdsale)
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(gas).transact(tx_args(current_owner, gas=300000))
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(gas).transact(tx_args(current_owner, gas=1000000))
     return status(tx_hash)
   return inner_set_transfer_gas
 
@@ -107,6 +107,7 @@ def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, 
     assert status(tx_hash)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
+    crowdsale_address = syndicatev2.contract.functions.purchase_address().call()
     crowdsale_contract = contract_from_address(crowdsale_address)
     tx_hash = crowdsale_contract.functions.setEarlyParticipantWhitelist(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
@@ -117,9 +118,22 @@ def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, 
     print("\nGasUsed:", get_tx_receipt(tx_hash).gasUsed)
     assert status(tx_hash)
     balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
-    print("\nBalance:", balance)
     return balance
   return inner_get_balance
+
+@pytest.fixture
+def real_eip20token_address(deployed_crowdsale):
+  crowdsale_contract = deployed_crowdsale()
+  token_address = crowdsale_contract.contract.functions.token().call()
+  return token_address
+
+@pytest.fixture
+def update_token(status, deploy, syndicatev2, deployed_crowdsale):
+  def inner_update_token(current_owner, token):
+    deploy(syndicatev2, "Syndicatev2", 5000000, deployed_crowdsale)
+    tx_hash = syndicatev2.contract.functions.update_token(token).transact(tx_args(current_owner, gas=300000))
+    return status(tx_hash)
+  return inner_update_token
 
 
 def test_deployment_failed_with_intrinsic_gas_too_low(deployment_status):
@@ -130,15 +144,25 @@ def test_deployment_successful_with_not_enough_gas(deployment_status):
   assert deployment_status(500000) == 0
 
 def test_deployment_successful_with_enough_gas(deployment_status):
-  assert deployment_status(9000000) == 1
+  assert deployment_status(9000000)
 
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
 def test_both_cases_of_set_transfer_gas(set_transfer_gas, current_owner, owner, request):
   current_owner = request.getfixturevalue(current_owner)
   if current_owner == owner:
-    assert set_transfer_gas(current_owner) == 1
+    assert set_transfer_gas(current_owner)
   else:
     assert set_transfer_gas(current_owner) == 0
 
-def test_there_is_contract_balance_after_sending_ether(get_balance):
+def test_there_is_not_contract_balance_after_sending_ether(get_balance):
   assert get_balance() == 0
+
+@pytest.mark.parametrize("token_address", ["real_eip20token_address", "address_zero"])
+@pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
+def test_all_cases_of_update_token(request, update_token, current_owner, token_address, owner, address_zero):
+  current_owner = request.getfixturevalue(current_owner)
+  token_address = request.getfixturevalue(token_address)
+  if current_owner == owner and token_address != address_zero:
+    assert update_token(current_owner, token_address)
+  else:
+    assert update_token(current_owner, token_address) == 0
