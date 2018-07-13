@@ -54,7 +54,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @notice Count NFTs tracked by this contract
   /// @return A count of valid NFTs tracked by this contract, where each one of
   ///  them has an assigned and queryable owner not equal to the zero address
-  function totalSupply() external view returns (uint256) {
+  function totalSupply() public view returns (uint256) {
     return total_tokens;
   }
 
