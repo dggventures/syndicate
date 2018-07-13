@@ -209,7 +209,7 @@ contract Syndicatev2 is Haltable, NFToken {
    */
    function get_token_id() internal returns (uint) {
     uint token_id = purchasers[msg.sender].token_id;
-    if (msg.sender != ownerOf(token_id)) {
+    if (totalSupply() > 0 && msg.sender != ownerOf(token_id)) {
       uint id = mintInternal(msg.sender);
       purchasers[msg.sender].token_id = id;
       return id;
