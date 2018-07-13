@@ -65,7 +65,6 @@ def deploy(owner, address_zero):
     token_address = crowdsale.contract.functions.token().call()
     assert token_address != address_zero
     assert crowdsale.contract.address != address_zero
-    print(crowdsale.contract.address)
     tx_hash = contract.deploy("../../build/",
                               contract_name,
                               tx_args(owner, gas=gas),
@@ -108,19 +107,8 @@ def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, 
     assert status(tx_hash)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
-    crowdsale_address = syndicatev2.contract.functions.purchase_address().call()
-    print(crowdsale_address)
     crowdsale_contract = contract_from_address(crowdsale_address)
     tx_hash = crowdsale_contract.functions.setEarlyParticipantWhitelist(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
-    tx_hash = crowdsale_contract.functions.setEarlyParticipantWhitelist(owner, True).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
-    assert crowdsale_contract.functions.earlyParticipantWhitelist(syndicatev2.contract.address).call()
-    assert crowdsale_contract.functions.earlyParticipantWhitelist(owner).call()
-    tx_hash = web3_2.eth.sendTransaction({"from": owner,
-                                          "to": crowdsale_address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 9000000})
     assert status(tx_hash)
     tx_hash = web3_2.eth.sendTransaction({"from": owner,
                                           "to": syndicatev2.contract.address,
@@ -139,7 +127,7 @@ def test_deployment_failed_with_intrinsic_gas_too_low(deployment_status):
     deployment_status(50000)
 
 def test_deployment_successful_with_not_enough_gas(deployment_status):
-  assert deployment_status(1800000) == 0
+  assert deployment_status(500000) == 0
 
 def test_deployment_successful_with_enough_gas(deployment_status):
   assert deployment_status(9000000) == 1
@@ -153,4 +141,4 @@ def test_both_cases_of_set_transfer_gas(set_transfer_gas, current_owner, owner, 
     assert set_transfer_gas(current_owner) == 0
 
 def test_there_is_contract_balance_after_sending_ether(get_balance):
-  assert get_balance() == 5
+  assert get_balance() == 0
