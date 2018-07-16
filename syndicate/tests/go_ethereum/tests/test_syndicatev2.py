@@ -41,27 +41,25 @@ def crowdsale():
 
 @pytest.fixture
 def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
-  def inner_deployed_crowdsale():
-    tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
-    assert status(tx_hash)
-    tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
-                                                                  config["start_time"],
-                                                                  config["end_time"],
-                                                                  config["token_retriever_account"],
-                                                                  config["tranches"],
-                                                                  config["multisig_supply"],
-                                                                  config["crowdsale_supply"],
-                                                                  config["token_decimals"],
-                                                                  config["max_tokens_to_sell"]
-                                                                  ).transact(tx_args(owner, gas=6000000))
-    assert status(tx_hash)
-    return crowdsale
-  return inner_deployed_crowdsale
+  tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
+  assert status(tx_hash)
+  tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
+                                                                config["start_time"],
+                                                                config["end_time"],
+                                                                config["token_retriever_account"],
+                                                                config["tranches"],
+                                                                config["multisig_supply"],
+                                                                config["crowdsale_supply"],
+                                                                config["token_decimals"],
+                                                                config["max_tokens_to_sell"]
+                                                                ).transact(tx_args(owner, gas=9000000))
+  assert status(tx_hash)
+  return crowdsale
 
 @pytest.fixture
-def deploy(owner, address_zero):
+def deploy(owner, address_zero, wait):
   def inner_deploy(contract, contract_name, gas, deployed_crowdsale):
-    crowdsale = deployed_crowdsale()
+    crowdsale = deployed_crowdsale
     token_address = crowdsale.contract.functions.token().call()
     assert token_address != address_zero
     assert crowdsale.contract.address != address_zero
@@ -72,6 +70,7 @@ def deploy(owner, address_zero):
                               crowdsale.contract.address,
                               "0x8ffC991Fc4C4fC53329Ad296C1aFe41470cFFbb3",
                               "0x1B91518648F8f153CE954a18d53BeF5047e39c73")
+    wait(tx_hash)
     return tx_hash
   return inner_deploy
 
@@ -123,7 +122,7 @@ def get_balance(deploy, syndicatev2, web3_2, status, owner, deployed_crowdsale, 
 
 @pytest.fixture
 def real_eip20token_address(deployed_crowdsale):
-  crowdsale_contract = deployed_crowdsale()
+  crowdsale_contract = deployed_crowdsale
   token_address = crowdsale_contract.contract.functions.token().call()
   return token_address
 
@@ -131,7 +130,9 @@ def real_eip20token_address(deployed_crowdsale):
 def update_token(status, deploy, syndicatev2, deployed_crowdsale):
   def inner_update_token(current_owner, token):
     deploy(syndicatev2, "Syndicatev2", 5000000, deployed_crowdsale)
-    tx_hash = syndicatev2.contract.functions.update_token(token).transact(tx_args(current_owner, gas=300000))
+    print("First token address during update_token:", syndicatev2.contract.functions.token().call())
+    print("Token address I am trying to update to:", token)
+    tx_hash = syndicatev2.contract.functions.update_token(token).transact(tx_args(current_owner, gas=3000000))
     return status(tx_hash)
   return inner_update_token
 
@@ -166,3 +167,6 @@ def test_all_cases_of_update_token(request, update_token, current_owner, token_a
     assert update_token(current_owner, token_address)
   else:
     assert update_token(current_owner, token_address) == 0
+
+def test_one_case_of_update_token(update_token, owner, real_eip20token_address):
+  assert update_token(owner, real_eip20token_address)
