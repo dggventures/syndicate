@@ -238,7 +238,7 @@ contract Syndicatev2 is Haltable, NFToken {
 
   /* Function to update the token balance of this contract
   */
-  function update_balances() public onlyOwner {
+  function update_balances() public {
     uint delta_tokens = token.balanceOf(address(this)).sub(token_balance);
     total_tokens = total_tokens.add(delta_tokens);
     token_balance = token_balance.add(delta_tokens);
@@ -268,7 +268,7 @@ contract Syndicatev2 is Haltable, NFToken {
 
   /* Helper function for purchaser token withdrawal
   */
-  function withdraw_tokens() internal returns (uint) {
+  function tokens_to_withdraw() internal returns (uint) {
     uint token_id = get_token_id();
     require(balances[token_id].purchased > 0);
     uint tokens = get_token_balance(token_id);
@@ -276,11 +276,11 @@ contract Syndicatev2 is Haltable, NFToken {
     token_balance = token_balance.sub(tokens);
     return tokens;
   }
-  
+
   /* Purchasers can withdraw their tokens using this function
   */
-  function withdraw_tokens_transfer() public {
-    uint tokens = withdraw_tokens();
+  function withdraw_tokens() public {
+    uint tokens = tokens_to_withdraw();
     require(token.transfer(msg.sender, tokens));
   }
 
@@ -290,7 +290,7 @@ contract Syndicatev2 is Haltable, NFToken {
     require(!token_history[token_contract]);
     require(token_contract.approve(dest, value));
   }
-  
+
   /* Payments to this contract require a bit of gas. 200k should be enough.
   */
   function() external payable {
