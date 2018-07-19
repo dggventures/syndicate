@@ -56,7 +56,7 @@ def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
   def inner_deployed_crowdsale():
     tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
     assert status(tx_hash)
-    print("\nCrowdsale State:", crowdsale.contract.functions.getState().call())
+    # print("\nCrowdsale State:", crowdsale.contract.functions.getState().call())
     tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
                                                                   config["start_time"],
                                                                   config["end_time"],
@@ -68,7 +68,7 @@ def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
                                                                   config["max_tokens_to_sell"]
                                                                   ).transact(tx_args(owner, gas=9000000))
     assert status(tx_hash)
-    print("\nDEPLOYED CROWDSALE STATE:", crowdsale.contract.functions.getState().call())
+    # print("\nDEPLOYED CROWDSALE STATE:", crowdsale.contract.functions.getState().call())
     return crowdsale
   return inner_deployed_crowdsale
 
@@ -166,54 +166,39 @@ def whitelist(status, deploy, syndicatev2):
   return inner_whitelist
 
 @pytest.fixture
-def withdraw_tokens_transfer(status, deploy, syndicatev2, get_tx_receipt, ether_sender, owner, web3_2, contract_from_address):
+def withdraw_tokens_transfer(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address):
   def inner_withdraw_tokens_transfer(current_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
-    purchase_address = syndicatev2.contract.functions.purchase_address().call()
-    crowdsale_instance = contract_from_address(purchase_address, "Crowdsale")
-    crowdsale_token = contract_from_address(crowdsale_instance.functions.token().call(), "CrowdsaleToken")
-    print("Token balance of syndicatev2 contract before purchasing:",
-          crowdsale_token.functions.balanceOf(syndicatev2.contract.address).call())
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(3000000).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
-    assert syndicatev2.contract.functions.token_balance().call() == 0
-    tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
-                                          "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 2000000})
-    assert status(tx_hash) == 1 # 0
-    print("Token balance of syndicatev2 contract after purchasing:",
-          crowdsale_token.functions.balanceOf(syndicatev2.contract.address).call())
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
+    crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale")
+    crowdsale_token_contract = contract_from_address(crowdsale_contract.functions.token().call(), "CrowdsaleToken")
     tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
-                                          "to": purchase_address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 2000000})
-    print("\nGasUsed in sending ether to ICO:", get_tx_receipt(tx_hash).gasUsed)
-    assert status(tx_hash)
-    crowdsale_instance = contract_from_address(purchase_address, "Crowdsale")
-    crowdsale_token = contract_from_address(crowdsale_instance.functions.token().call(), "CrowdsaleToken")
-    print("Token balance of syndicatev2 contract before purchasing:",
-          crowdsale_token.functions.balanceOf(syndicatev2.contract.address).call())
-    tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
                                           "to": syndicatev2.contract.address,
                                           "value": web3_2.toWei(20, "ether"),
                                           "gas": 2000000})
-    print("Token balance of syndicatev2 contract after purchasing:",
-          crowdsale_token.functions.balanceOf(syndicatev2.contract.address).call())
-    print("\nGasUsed in sending ether to syndicate:", get_tx_receipt(tx_hash).gasUsed)
-    if current_sender == ether_sender:
-      assert status(tx_hash)
-      print("THE ASSERT OF THE PURCHASE IS PASSING")
-    else:
-      assert status(tx_hash) == 0
+    print("Token balance of Syndicatev2 after ether sending:", crowdsale_token_contract.functions.balanceOf(syndicatev2.contract.address).call())
+    assert status(tx_hash) == 1
+    print("THE ASSERT OF THE PURCHASE IS PASSING")
     tx_hash = syndicatev2.contract.functions.withdraw_tokens_transfer().transact(tx_args(current_sender, gas=900000))
     return status(tx_hash)
   return inner_withdraw_tokens_transfer
 
+@pytest.fixture
+def send_ether(status, deploy, syndicatev2, web3_2, owner):
+  def inner_send_ether(current_sender):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    assert status(tx_hash)
+    tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
+                                          "to": syndicatev2.contract.address,
+                                          "value": web3_2.toWei(20, "ether"),
+                                          "gas": 350000})
+    return status(tx_hash)
+  return inner_send_ether
 
-def test_deployment_failed_with_intrinsic_gas_too_low(deployment_status):
+
+def test_deployment_failed_wi4th_intrinsic_gas_too_low(deployment_status):
   with pytest.raises(ValueError):
     deployment_status(50000)
 
@@ -272,4 +257,7 @@ def test_withdraw_tokens_transfer(request, withdraw_tokens_transfer, current_sen
     assert 0 == withdraw_tokens_transfer(current_sender)
 
 def test_one_withdraw_tokens_transfer(withdraw_tokens_transfer, ether_sender):
-  assert withdraw_tokens_transfer(ether_sender) == 0 # 1
+  assert withdraw_tokens_transfer(ether_sender) == 0
+
+def test_one_send_ether(send_ether, ether_sender):
+  assert send_ether(ether_sender)
