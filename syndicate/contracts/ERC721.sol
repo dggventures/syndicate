@@ -67,7 +67,7 @@ contract ERC721 /* is ERC165 */ {
   /// @param _from The current owner of the NFT
   /// @param _to The new owner
   /// @param _tokenId The NFT to transfer
-  function transferFrom(address _from, address _to, uint256 _tokenId) external /*payable*/;
+  function transferFrom(address _from, address _to, uint256 _tokenId) public /*payable*/;
 
   /// @notice Set or reaffirm the approved address for an NFT
   /// @dev The zero address indicates there is no approved address.
@@ -83,7 +83,7 @@ contract ERC721 /* is ERC165 */ {
   /// @dev Emits the ApprovalForAll event
   /// @param _operator Address to add to the set of authorized operators.
   /// @param _approved True if the operators is approved, false to revoke approval
-  function setApprovalForAll(address _operator, bool _approved) external;
+  function setApprovalForAll(address _operator, bool _approved) public;
 
   /// @notice Get the approved address for a single NFT
   /// @dev Throws if `_tokenId` is not a valid NFT
