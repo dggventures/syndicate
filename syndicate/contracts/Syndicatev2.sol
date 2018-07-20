@@ -144,7 +144,9 @@ contract Syndicatev2 is Haltable, NFToken {
   // Minor partner address
   address public minor_partner_address;
   // Gas used for transfers.
-  uint public gas = 1000;  
+  uint public gas = 1000;
+  // Moment in time when the first withdrawing occurred. Initialized as 0.
+  uint public first_withdraw = 0;
   // How much money was purchased in the contract
   uint public purchase_pool = 0;
   // The amount of tokens the contract has received in its lifetime
@@ -158,6 +160,8 @@ contract Syndicatev2 is Haltable, NFToken {
   mapping(address => bool) public token_history;
   // Whitelisting enable flag
   bool public enforce_whitelist = false;
+  // Purchasing enable flag
+  bool public purchase_enabled = true;
   // Whitelisting of purchasers
   mapping(address => Purchaser) public purchasers;
   // Balances of purchase tokens (dictionary: token |--> purchase)
@@ -166,12 +170,21 @@ contract Syndicatev2 is Haltable, NFToken {
   struct Purchaser {
     bool whitelisted;
     uint token_id;
+    bool owner_retriever_disabled;
   }
 
   struct Purchase {
     uint withdrawn_tokens;
     uint purchased;
   }
+
+  /** State machine
+   *
+   * - Active: Purchasers are allowed to purchase.
+   * - Inactive: Purchasers are no longer allowed to purchase.
+   */
+  enum State{Unknown, Active, Inactive}
+
 
   constructor(EIP20Token token_contract, address purchase, address major_partner, address minor_partner) public {
     update_token(token_contract);
@@ -181,7 +194,7 @@ contract Syndicatev2 is Haltable, NFToken {
   }
 
   // Transfer some funds to the target purchase address.
-  function execute_transfer(uint transfer_amount, uint token_id) internal {
+  function execute_transfer(uint transfer_amount, uint token_id) internal inState(State.Active) {
     require(!enforce_whitelist || purchasers[msg.sender].whitelisted);
     require(transfer_amount > 0);
 
@@ -236,6 +249,11 @@ contract Syndicatev2 is Haltable, NFToken {
     token_history[token_contract] = true;
   }
 
+  function update_purchase_address(address purchase_addr) public onlyOwner {
+    require(purchase_addr != 0);
+    purchase_address = purchase_addr;
+  }
+
   /* Function to update the token balance of this contract
   */
   function update_balances() public {
@@ -259,6 +277,10 @@ contract Syndicatev2 is Haltable, NFToken {
     purchasers[purchaser].whitelisted = allowed;
   }
 
+  function set_purchasing_availability(bool allowed) public onlyOwner {
+    purchase_enabled = allowed;
+  }
+
   /* Function to get the token balance of a purchaser
   */
   function get_token_balance(uint token_id) public view returns (uint) {
@@ -280,6 +302,9 @@ contract Syndicatev2 is Haltable, NFToken {
   /* Purchasers can withdraw their tokens using this function
   */
   function withdraw_tokens() public {
+    if (first_withdraw == 0) {
+      first_withdraw = now;
+    }
     uint tokens = tokens_to_withdraw();
     require(token.transfer(msg.sender, tokens));
   }
@@ -291,10 +316,33 @@ contract Syndicatev2 is Haltable, NFToken {
     require(token_contract.approve(dest, value));
   }
 
+  function transferFrom(address from, address to, uint256 token_id) public {
+    if (now >= first_withdraw + 1 weeks && msg.sender == owner && !purchasers[from].owner_retriever_disabled) {
+      super.commitTransfer(from, to, token_id);
+    } else {
+      super.transferFrom(from, to, token_id);
+    }
+  }
+
+  function setApprovalForAll(address operator, bool approved) public {
+    purchasers[msg.sender].owner_retriever_disabled = true;
+    super.setApprovalForAll(operator, approved);
+  }
+
+  function getState() public view returns (State) {
+    if (purchase_enabled) return State.Active;
+    else return State.Inactive;
+  }
+
   /* Payments to this contract require a bit of gas. 200k should be enough.
   */
   function() external payable {
     uint token_id = get_token_id();
     execute_transfer(msg.value, token_id);
+  }
+
+  modifier inState(State state) {
+    require(getState() == state);
+    _;
   }
 }
