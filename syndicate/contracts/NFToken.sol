@@ -137,7 +137,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   ///  all your assets.
   /// @param operator Address to add to the set of authorized operators.
   /// @param approved True if the operators is approved, false to revoke approval
-  function setApprovalForAll(address operator, bool approved) external {
+  function setApprovalForAll(address operator, bool approved) public {
     accounts[msg.sender].approved_operator[operator] = approved;
     emit ApprovalForAll(msg.sender, operator, approved);
   }
