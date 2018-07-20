@@ -63,7 +63,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @param to The new owner
   /// @param token_id The NFT to transfer
   /// @param data Additional data with no specified format, sent in call to `to`
-  function safeTransferFrom(address from, address to, uint256 token_id, bytes data) public {
+  function safeTransferFrom(address from, address to, uint256 token_id, bytes data) public canTransfer(token_id) {
     // @dev Do not reorder these. The call of untrusted code should be done at the very end.
     commitTransfer(from, to, token_id);
     notifyTransfer(from, to, token_id, data);
@@ -83,12 +83,11 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @param from The current owner of the NFT
   /// @param to The new owner
   /// @param token_id The NFT to transfer
-  function transferFrom(address from, address to, uint256 token_id) external {
+  function transferFrom(address from, address to, uint256 token_id) public canTransfer(token_id) {
     commitTransfer(from, to, token_id);
   }
 
-  function commitTransfer(address from, address to, uint256 token_id) private 
-  validAddress(to) validIndex(token_id) canTransfer(token_id) {
+  function commitTransfer(address from, address to, uint256 token_id) internal validAddress(to) validIndex(token_id) {
     // Verify ownership of the token
     require(from == tokens[token_id].owner);
 
