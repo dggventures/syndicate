@@ -52,11 +52,18 @@ def standard_token():
   return Contract()
 
 @pytest.fixture
+def contract_from_address(web3_2, crowdsale_path):
+  def inner_contract_from_address(address, contract_name):
+    contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(crowdsale_path, contract_name)
+    contract = web3_2.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
+    return contract
+  return inner_contract_from_address
+
+@pytest.fixture
 def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
   def inner_deployed_crowdsale():
     tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
     assert status(tx_hash)
-    # print("\nCrowdsale State:", crowdsale.contract.functions.getState().call())
     tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
                                                                   config["start_time"],
                                                                   config["end_time"],
@@ -68,7 +75,6 @@ def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
                                                                   config["max_tokens_to_sell"]
                                                                   ).transact(tx_args(owner, gas=9000000))
     assert status(tx_hash)
-    # print("\nDEPLOYED CROWDSALE STATE:", crowdsale.contract.functions.getState().call())
     return crowdsale
   return inner_deployed_crowdsale
 
@@ -107,26 +113,15 @@ def set_transfer_gas(status, deploy, syndicatev2):
   return inner_set_transfer_gas
 
 @pytest.fixture
-def contract_from_address(web3_2, crowdsale_path):
-  def inner_contract_from_address(address, contract_name):
-    contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(crowdsale_path, contract_name)
-    contract = web3_2.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
-    return contract
-  return inner_contract_from_address
-
-@pytest.fixture
-def get_balance(deploy, syndicatev2, web3_2, status, owner, get_tx_receipt):
+def get_balance(deploy, syndicatev2, web3_2, status, owner):
   def inner_get_balance():
     deploy(syndicatev2, "Syndicatev2", 3000000)
-    tx_hash = syndicatev2.contract.functions.whitelist(owner, True).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(300000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
     tx_hash = web3_2.eth.sendTransaction({"from": owner,
                                           "to": syndicatev2.contract.address,
                                           "value": web3_2.toWei(20, "ether"),
                                           "gas": 500000})
-    print("\nGasUsed:", get_tx_receipt(tx_hash).gasUsed)
     assert status(tx_hash)
     balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
     return balance
@@ -166,8 +161,8 @@ def whitelist(status, deploy, syndicatev2):
   return inner_whitelist
 
 @pytest.fixture
-def withdraw_tokens_transfer(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address):
-  def inner_withdraw_tokens_transfer(current_sender):
+def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address):
+  def inner_withdraw_tokens(current_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
@@ -177,12 +172,15 @@ def withdraw_tokens_transfer(status, deploy, syndicatev2, ether_sender, owner, w
                                           "to": syndicatev2.contract.address,
                                           "value": web3_2.toWei(20, "ether"),
                                           "gas": 2000000})
-    print("Token balance of Syndicatev2 after ether sending:", crowdsale_token_contract.functions.balanceOf(syndicatev2.contract.address).call())
-    assert status(tx_hash) == 1
+    assert status(tx_hash)
+    print("Token balance of Syndicatev2 after ether sending (checking ICO):",
+          crowdsale_token_contract.functions.balanceOf(syndicatev2.contract.address).call())
+    print("Token balance of Syndicatev2 after ether sending (checking Syndicatev2):",
+          syndicatev2.contract.functions.token_balance().call())
     print("THE ASSERT OF THE PURCHASE IS PASSING")
-    tx_hash = syndicatev2.contract.functions.withdraw_tokens_transfer().transact(tx_args(current_sender, gas=900000))
+    tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
     return status(tx_hash)
-  return inner_withdraw_tokens_transfer
+  return inner_withdraw_tokens
 
 @pytest.fixture
 def send_ether(status, deploy, syndicatev2, web3_2, owner):
@@ -198,14 +196,14 @@ def send_ether(status, deploy, syndicatev2, web3_2, owner):
   return inner_send_ether
 
 
-def test_deployment_failed_wi4th_intrinsic_gas_too_low(deployment_status):
+def test_deployment_raises_error_with_intrinsic_gas_too_low(deployment_status):
   with pytest.raises(ValueError):
     deployment_status(50000)
 
-def test_deployment_successful_with_not_enough_gas(deployment_status):
+def test_deployment_fails_with_not_enough_gas(deployment_status):
   assert deployment_status(500000) == 0
 
-def test_deployment_successful_with_enough_gas(deployment_status):
+def test_deployment_succeeds_with_enough_gas(deployment_status):
   assert deployment_status(9000000)
 
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
@@ -216,7 +214,7 @@ def test_both_cases_of_set_transfer_gas(set_transfer_gas, current_owner, owner, 
   else:
     assert set_transfer_gas(current_owner) == 0
 
-def test_there_is_not_contract_balance_after_sending_ether(get_balance):
+def test_there_is_no_token_balance_of_contract_after_sending_ether(get_balance):
   assert get_balance() == 0
 
 @pytest.mark.parametrize("token_address", ["real_eip20token_address", "address_zero"])
@@ -228,9 +226,6 @@ def test_all_cases_of_update_token(request, update_token, current_owner, token_a
     assert update_token(current_owner, token_address)
   else:
     assert update_token(current_owner, token_address) == 0
-
-def test_one_update_token_case(update_token, owner, real_eip20token_address):
-  assert update_token(owner, real_eip20token_address)
 
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
 def test_set_enforce_whitelist(request, set_enforce_whitelist, current_owner, owner):
@@ -249,15 +244,15 @@ def test_whitelist(request, whitelist, current_owner, owner):
     assert whitelist(current_owner, True) == 0
 
 @pytest.mark.parametrize("current_sender", ["ether_sender", "not_ether_sender"])
-def test_withdraw_tokens_transfer(request, withdraw_tokens_transfer, current_sender, ether_sender):
+def test_withdraw_tokens(request, withdraw_tokens, current_sender, ether_sender):
   current_sender = request.getfixturevalue(current_sender)
   if current_sender == ether_sender:
-    assert 1 == withdraw_tokens_transfer(current_sender)
+    assert withdraw_tokens(current_sender)
   else:
-    assert 0 == withdraw_tokens_transfer(current_sender)
+    assert 0 == withdraw_tokens(current_sender)
 
-def test_one_withdraw_tokens_transfer(withdraw_tokens_transfer, ether_sender):
-  assert withdraw_tokens_transfer(ether_sender) == 0
+def test_one_withdraw_tokens(withdraw_tokens, ether_sender):
+  assert withdraw_tokens(ether_sender)
 
 def test_one_send_ether(send_ether, ether_sender):
   assert send_ether(ether_sender)
