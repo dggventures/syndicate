@@ -167,16 +167,13 @@ def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, co
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
     crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale")
-    crowdsale_token_contract = contract_from_address(crowdsale_contract.functions.token().call(), "CrowdsaleToken")
+    tx_hash = crowdsale_contract.functions.setTransferAgent(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
     tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(20, "ether"),
+                                          "value": web3_2.toWei(5, "ether"),
                                           "gas": 2000000})
     assert status(tx_hash)
-    print("Token balance of Syndicatev2 after ether sending (checking ICO):",
-          crowdsale_token_contract.functions.balanceOf(syndicatev2.contract.address).call())
-    print("Token balance of Syndicatev2 after ether sending (checking Syndicatev2):",
-          syndicatev2.contract.functions.token_balance().call())
     print("THE ASSERT OF THE PURCHASE IS PASSING")
     tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
     return status(tx_hash)
@@ -190,8 +187,8 @@ def send_ether(status, deploy, syndicatev2, web3_2, owner):
     assert status(tx_hash)
     tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 350000})
+                                          "value": web3_2.toWei(5, "ether"),
+                                          "gas": 500000})
     return status(tx_hash)
   return inner_send_ether
 
