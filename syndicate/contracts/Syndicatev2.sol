@@ -136,7 +136,7 @@ contract Ownable {
 
 // The owner of this contract should be an externally owned account
 contract Syndicatev2 is Haltable, NFToken {
-  using SafeMath for uint;  
+  using SafeMath for uint;
   // Address of the target contract
   address public purchase_address;
   // Major partner address
