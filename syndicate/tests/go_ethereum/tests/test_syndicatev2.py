@@ -7,6 +7,7 @@ from contract import Contract
 from tx_args import tx_args
 import os
 from client_config import config_f
+from datetime import datetime
 
 
 ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
@@ -21,7 +22,11 @@ def address_zero():
 
 @pytest.fixture
 def config():
-  return config_f()
+  def inner_config(start_time):
+    config_dict = config_f()
+    config_dict["start_time"] = start_time
+    return config_dict
+  return inner_config
 
 @pytest.fixture(scope="session")
 def owner(web3_2):
@@ -60,23 +65,45 @@ def contract_from_address(web3_2, crowdsale_path):
   return inner_contract_from_address
 
 @pytest.fixture
+def get_balance_after_sending_ether(deploy, syndicatev2, web3_2, status, owner):
+  def inner_get_balance_after_sending_ether():
+    deploy(syndicatev2, "Syndicatev2", 3000000)
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(300000).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    tx_hash = web3_2.eth.sendTransaction({"from": owner,
+                                          "to": syndicatev2.contract.address,
+                                          "value": web3_2.toWei(20, "ether"),
+                                          "gas": 500000})
+    assert status(tx_hash)
+    balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
+    return balance
+  return inner_get_balance_after_sending_ether
+
+@pytest.fixture
 def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
   def inner_deployed_crowdsale():
+    config_dict = config(int(datetime.now().timestamp()) + 6)
     tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
     assert status(tx_hash)
-    tx_hash = crowdsale.contract.functions.configurationCrowdsale(config["MW_address"],
-                                                                  config["start_time"],
-                                                                  config["end_time"],
-                                                                  config["token_retriever_account"],
-                                                                  config["tranches"],
-                                                                  config["multisig_supply"],
-                                                                  config["crowdsale_supply"],
-                                                                  config["token_decimals"],
-                                                                  config["max_tokens_to_sell"]
+    tx_hash = crowdsale.contract.functions.configurationCrowdsale(config_dict["MW_address"],
+                                                                  config_dict["start_time"],
+                                                                  config_dict["end_time"],
+                                                                  config_dict["token_retriever_account"],
+                                                                  config_dict["tranches"],
+                                                                  config_dict["multisig_supply"],
+                                                                  config_dict["crowdsale_supply"],
+                                                                  config_dict["token_decimals"],
+                                                                  config_dict["max_tokens_to_sell"]
                                                                   ).transact(tx_args(owner, gas=9000000))
     assert status(tx_hash)
     return crowdsale
   return inner_deployed_crowdsale
+
+@pytest.fixture
+def eip20token_address(deployed_crowdsale):
+  crowdsale = deployed_crowdsale()
+  token_address = crowdsale.contract.functions.token().call()
+  return token_address
 
 @pytest.fixture
 def deploy(owner, address_zero, wait, deployed_crowdsale):
@@ -113,28 +140,6 @@ def set_transfer_gas(status, deploy, syndicatev2):
   return inner_set_transfer_gas
 
 @pytest.fixture
-def get_balance(deploy, syndicatev2, web3_2, status, owner):
-  def inner_get_balance():
-    deploy(syndicatev2, "Syndicatev2", 3000000)
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(300000).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": owner,
-                                          "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 500000})
-    assert status(tx_hash)
-    balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
-    return balance
-  return inner_get_balance
-
-@pytest.fixture
-def real_eip20token_address(standard_token, crowdsale_path, not_owner, status):
-  tx_hash = standard_token.deploy(crowdsale_path, "StandardToken", tx_args(not_owner, gas=5000000),)
-  assert status(tx_hash)
-  token_address = standard_token.contract.address
-  return token_address
-
-@pytest.fixture
 def emergency_withdraw(status, deploy, syndicatev2):
   def inner_emergency_withdraw(current_owner):
     deploy(syndicatev2, "Syndicatev2", 5000000)
@@ -146,8 +151,6 @@ def emergency_withdraw(status, deploy, syndicatev2):
 def update_token(status, deploy, syndicatev2):
   def inner_update_token(current_owner, token):
     deploy(syndicatev2, "Syndicatev2", 5000000)
-    print("\nFirst token address during update_token:", syndicatev2.contract.functions.token().call())
-    print("\nToken address I am trying to update to:", token)
     tx_hash = syndicatev2.contract.functions.update_token(token).transact(tx_args(current_owner, gas=3000000))
     return status(tx_hash)
   return inner_update_token
@@ -199,6 +202,22 @@ def send_ether(status, deploy, syndicatev2, web3_2, owner):
     return status(tx_hash)
   return inner_send_ether
 
+@pytest.fixture
+def transfer_from(status, deploy, syndicatev2, ether_sender, web3_2, owner):
+  def inner_transfer_from(from_addr, to_addr, token_id, current_tx_sender):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    assert status(tx_hash)
+    tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
+                                          "to": syndicatev2.contract.address,
+                                          "value": web3_2.toWei(5, "ether"),
+                                          "gas": 500000})
+    assert status(tx_hash)
+    print(str(type(from_addr)) + "\n" + str(type(to_addr)) + "\n" + str(type(token_id)) + "\n")
+    tx_hash = syndicatev2.contract.functions.transferFrom(from_addr, to_addr, token_id).transact(tx_args(current_tx_sender, gas=1000000))
+    return status(tx_hash)
+  return inner_transfer_from
+
 
 def test_deployment_raises_error_with_intrinsic_gas_too_low(deployment_status):
   with pytest.raises(ValueError):
@@ -218,10 +237,10 @@ def test_set_transfer_gas(set_transfer_gas, current_owner, owner, request):
   else:
     assert set_transfer_gas(current_owner) == 0
 
-def test_there_is_no_token_balance_of_contract_after_sending_ether(get_balance):
-  assert get_balance() == 0
+def test_there_is_no_token_balance_of_contract_after_sending_ether(get_balance_after_sending_ether):
+  assert get_balance_after_sending_ether() == 0
 
-@pytest.mark.parametrize("token_address", ["real_eip20token_address", "address_zero"])
+@pytest.mark.parametrize("token_address", ["eip20token_address", "address_zero"])
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
 def test_update_token(request, update_token, current_owner, token_address, owner, address_zero):
   current_owner = request.getfixturevalue(current_owner)
@@ -266,3 +285,13 @@ def test_emergency_withdraw(request, emergency_withdraw, current_owner, owner):
   else:
     assert emergency_withdraw(current_owner) == 0
 
+@pytest.mark.parametrize("from_addr", ["ether_sender", "not_ether_sender"])
+@pytest.mark.parametrize("current_tx_sender", ["ether_sender", "not_ether_sender"])
+def test_transfer_from(request, from_addr, current_tx_sender, owner, ether_sender, transfer_from):
+  token_id = 0
+  to_addr = owner
+  current_tx_sender = request.getfixturevalue(current_tx_sender)
+  if current_tx_sender == ether_sender and from_addr == ether_sender:
+    assert transfer_from(from_addr, to_addr, token_id, current_tx_sender)
+  else:
+    assert transfer_from(from_addr, to_addr, token_id, current_tx_sender) == 0
