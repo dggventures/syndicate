@@ -135,6 +135,14 @@ def real_eip20token_address(standard_token, crowdsale_path, not_owner, status):
   return token_address
 
 @pytest.fixture
+def emergency_withdraw(status, deploy, syndicatev2):
+  def inner_emergency_withdraw(current_owner):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    tx_hash = syndicatev2.contract.functions.emergency_withdraw().transact(tx_args(current_owner, gas=1000000))
+    return status(tx_hash)
+  return inner_emergency_withdraw
+
+@pytest.fixture
 def update_token(status, deploy, syndicatev2):
   def inner_update_token(current_owner, token):
     deploy(syndicatev2, "Syndicatev2", 5000000)
@@ -174,7 +182,6 @@ def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, co
                                           "value": web3_2.toWei(5, "ether"),
                                           "gas": 2000000})
     assert status(tx_hash)
-    print("THE ASSERT OF THE PURCHASE IS PASSING")
     tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
     return status(tx_hash)
   return inner_withdraw_tokens
@@ -204,7 +211,7 @@ def test_deployment_succeeds_with_enough_gas(deployment_status):
   assert deployment_status(9000000)
 
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
-def test_both_cases_of_set_transfer_gas(set_transfer_gas, current_owner, owner, request):
+def test_set_transfer_gas(set_transfer_gas, current_owner, owner, request):
   current_owner = request.getfixturevalue(current_owner)
   if current_owner == owner:
     assert set_transfer_gas(current_owner)
@@ -248,8 +255,14 @@ def test_withdraw_tokens(request, withdraw_tokens, current_sender, ether_sender)
   else:
     assert 0 == withdraw_tokens(current_sender)
 
-def test_one_withdraw_tokens(withdraw_tokens, ether_sender):
-  assert withdraw_tokens(ether_sender)
-
-def test_one_send_ether(send_ether, ether_sender):
+def test_sending_ether(send_ether, ether_sender):
   assert send_ether(ether_sender)
+
+@pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
+def test_emergency_withdraw(request, emergency_withdraw, current_owner, owner):
+  current_owner = request.getfixturevalue(current_owner)
+  if current_owner == owner:
+    assert emergency_withdraw(current_owner)
+  else:
+    assert emergency_withdraw(current_owner) == 0
+
