@@ -223,7 +223,7 @@ def test_there_is_no_token_balance_of_contract_after_sending_ether(get_balance):
 
 @pytest.mark.parametrize("token_address", ["real_eip20token_address", "address_zero"])
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
-def test_all_cases_of_update_token(request, update_token, current_owner, token_address, owner, address_zero):
+def test_update_token(request, update_token, current_owner, token_address, owner, address_zero):
   current_owner = request.getfixturevalue(current_owner)
   token_address = request.getfixturevalue(token_address)
   if current_owner == owner and token_address != address_zero:
