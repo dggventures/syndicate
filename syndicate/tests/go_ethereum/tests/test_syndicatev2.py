@@ -44,16 +44,20 @@ def ether_sender(web3_2):
 def not_ether_sender(web3_2):
   return web3_2.eth.accounts[3]
 
+@pytest.fixture(scope="session")
+def true():
+  return True
+
+@pytest.fixture(scope="session")
+def false():
+  return False
+
 @pytest.fixture
 def syndicatev2():
   return Contract()
 
 @pytest.fixture
 def crowdsale():
-  return Contract()
-
-@pytest.fixture
-def standard_token():
   return Contract()
 
 @pytest.fixture
@@ -190,14 +194,28 @@ def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, co
   return inner_withdraw_tokens
 
 @pytest.fixture
-def send_ether(status, deploy, syndicatev2, web3_2, owner):
-  def inner_send_ether(current_sender):
+def send_ether(status, deploy, syndicatev2, web3_2, owner, ether_sender):
+  def inner_send_ether(enforce_whitelist, whitelisted, transfer_amount, gas, purchase_active):
     deploy(syndicatev2, "Syndicatev2", 5000000)
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
-    assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
+    if gas:
+      tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+      assert status(tx_hash)
+    if enforce_whitelist:
+      tx_hash = syndicatev2.contract.functions.set_enforce_whitelist(True).transact(tx_args(owner, gas=50000))
+      assert status(tx_hash)
+    if transfer_amount:
+      amount = 5
+    else:
+      amount = 0
+    if whitelisted:
+      tx_hash = syndicatev2.contract.functions.whitelist(ether_sender, True).transact(tx_args(owner, gas=50000))
+      assert status(tx_hash)
+    if not purchase_active:
+      tx_hash = syndicatev2.contract.functions.set_purchasing_availability(False).transact(tx_args(owner, gas=50000))
+      assert status(tx_hash)
+    tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(5, "ether"),
+                                          "value": web3_2.toWei(amount, "ether"),
                                           "gas": 500000})
     return status(tx_hash)
   return inner_send_ether
@@ -214,6 +232,7 @@ def transfer_from(status, deploy, syndicatev2, ether_sender, web3_2, owner):
                                           "gas": 500000})
     assert status(tx_hash)
     print(str(type(from_addr)) + "\n" + str(type(to_addr)) + "\n" + str(type(token_id)) + "\n")
+    print(from_addr + "\n" + to_addr + "\n" + str(token_id) + "\n")
     tx_hash = syndicatev2.contract.functions.transferFrom(from_addr, to_addr, token_id).transact(tx_args(current_tx_sender, gas=1000000))
     return status(tx_hash)
   return inner_transfer_from
@@ -226,6 +245,8 @@ def set_approval_for_all(status, deploy, syndicatev2, owner):
     return status(tx_hash)
   return inner_set_approval_for_all
 
+
+# General test cases functions
 
 def test_deployment_raises_error_with_intrinsic_gas_too_low(deployment_status):
   with pytest.raises(ValueError):
@@ -282,8 +303,21 @@ def test_withdraw_tokens(request, withdraw_tokens, current_sender, ether_sender)
   else:
     assert 0 == withdraw_tokens(current_sender)
 
-def test_sending_ether(send_ether, ether_sender):
-  assert send_ether(ether_sender)
+@pytest.mark.parametrize("enforce_whitelist", ["true", "false"])
+@pytest.mark.parametrize("whitelisted", ["true", "false"])
+@pytest.mark.parametrize("transfer_amount", ["true", "false"])
+@pytest.mark.parametrize("gas", ["true", "false"])
+@pytest.mark.parametrize("purchase_active", ["true", "false"])
+def test_sending_ether(request, send_ether, enforce_whitelist, whitelisted, transfer_amount, gas, purchase_active):
+  enforce_whitelist = request.getfixturevalue(enforce_whitelist)
+  whitelisted = request.getfixturevalue(whitelisted)
+  transfer_amount = request.getfixturevalue(transfer_amount)
+  gas = request.getfixturevalue(gas)
+  purchase_active = request.getfixturevalue(purchase_active)
+  if (not enforce_whitelist or whitelisted) and transfer_amount and gas and purchase_active:
+    assert send_ether(enforce_whitelist, whitelisted, transfer_amount, gas, purchase_active)
+  else:
+    assert 0 == send_ether(enforce_whitelist, whitelisted, transfer_amount, gas, purchase_active)
 
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
 def test_emergency_withdraw(request, emergency_withdraw, current_owner, owner):
@@ -299,6 +333,7 @@ def test_transfer_from(request, from_addr, current_tx_sender, owner, ether_sende
   token_id = 0
   to_addr = owner
   current_tx_sender = request.getfixturevalue(current_tx_sender)
+  from_addr = request.getfixturevalue(from_addr)
   if current_tx_sender == ether_sender and from_addr == ether_sender:
     assert transfer_from(from_addr, to_addr, token_id, current_tx_sender)
   else:
@@ -306,3 +341,8 @@ def test_transfer_from(request, from_addr, current_tx_sender, owner, ether_sende
 
 def test_set_approval_for_all(set_approval_for_all, ether_sender):
   assert set_approval_for_all(ether_sender, True)
+
+
+# Test functions for the doc's special cases
+
+
