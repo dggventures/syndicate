@@ -218,6 +218,14 @@ def transfer_from(status, deploy, syndicatev2, ether_sender, web3_2, owner):
     return status(tx_hash)
   return inner_transfer_from
 
+@pytest.fixture
+def set_approval_for_all(status, deploy, syndicatev2, owner):
+  def inner_set_approval_for_all(operator, value):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    tx_hash = syndicatev2.contract.functions.setApprovalForAll(operator, value).transact(tx_args(owner, gas=1000000))
+    return status(tx_hash)
+  return inner_set_approval_for_all
+
 
 def test_deployment_raises_error_with_intrinsic_gas_too_low(deployment_status):
   with pytest.raises(ValueError):
@@ -295,3 +303,6 @@ def test_transfer_from(request, from_addr, current_tx_sender, owner, ether_sende
     assert transfer_from(from_addr, to_addr, token_id, current_tx_sender)
   else:
     assert transfer_from(from_addr, to_addr, token_id, current_tx_sender) == 0
+
+def test_set_approval_for_all(set_approval_for_all, ether_sender):
+  assert set_approval_for_all(ether_sender, True)
