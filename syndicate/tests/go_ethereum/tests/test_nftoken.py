@@ -93,6 +93,23 @@ def safe_transfer_from_without_data(status, deploy, nftoken, token_owner, agent,
     return status(tx_hash)
   return inner_safe_transfer_from_without_data
 
+@pytest.fixture
+def transfer_from(status, deploy, nftoken, token_owner, agent, operator):
+  def inner_transfer_from(current_sender, from_addr, to_addr):
+    deploy(nftoken, "NFTokenMock", 5000000)
+    tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    token_id = nftoken.contract.functions.token_id().call()
+    tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.transferFrom(from_addr,
+                                                      to_addr,
+                                                      token_id).transact(tx_args(current_sender, gas=1000000))
+    return status(tx_hash)
+  return inner_transfer_from
+
 
 # General test cases functions
 
@@ -129,3 +146,14 @@ def test_safe_transfer_from_without_data(request, safe_transfer_from_without_dat
     assert safe_transfer_from_without_data(current_sender, from_addr, to_addr)
   else:
     assert safe_transfer_from_without_data(current_sender, from_addr, to_addr) == 0
+
+@pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
+@pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
+def test_transfer_from(request, transfer_from, current_sender, from_addr, token_owner, agent, operator):
+  current_sender = request.getfixturevalue(current_sender)
+  from_addr = request.getfixturevalue(from_addr)
+  to_addr = operator
+  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
+    assert transfer_from(current_sender, from_addr, to_addr)
+  else:
+    assert transfer_from(current_sender, from_addr, to_addr) == 0
