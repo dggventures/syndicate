@@ -32,6 +32,14 @@ def no_credentials_sender(web3_2):
   return web3_2.eth.accounts[5]
 
 @pytest.fixture(scope="session")
+def correct_token_id():
+  return 0
+
+@pytest.fixture(scope="session")
+def incorrect_token_id():
+  return 1
+
+@pytest.fixture(scope="session")
 def data_example():
   return "MessageData"
 
@@ -110,6 +118,18 @@ def transfer_from(status, deploy, nftoken, token_owner, agent, operator):
     return status(tx_hash)
   return inner_transfer_from
 
+@pytest.fixture
+def approve(status, deploy, nftoken, token_owner, agent, operator):
+  def inner_approve(current_sender, token_id):
+    deploy(nftoken, "NFTokenMock", 5000000)
+    tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(current_sender, gas=1000000))
+    return status(tx_hash)
+  return inner_approve
+
 
 # General test cases functions
 
@@ -157,3 +177,13 @@ def test_transfer_from(request, transfer_from, current_sender, from_addr, token_
     assert transfer_from(current_sender, from_addr, to_addr)
   else:
     assert transfer_from(current_sender, from_addr, to_addr) == 0
+
+@pytest.mark.parametrize("current_sender", ["token_owner", "operator", "no_credentials_sender"])
+@pytest.mark.parametrize("token_id", ["correct_token_id", "incorrect_token_id"])
+def test_approve(request, approve, current_sender, token_id, token_owner, operator, correct_token_id):
+  current_sender = request.getfixturevalue(current_sender)
+  token_id = request.getfixturevalue(token_id)
+  if (current_sender == token_owner or current_sender == operator) and token_id == correct_token_id:
+    assert approve(current_sender, token_id)
+  else:
+    assert approve(current_sender, token_id) == 0
