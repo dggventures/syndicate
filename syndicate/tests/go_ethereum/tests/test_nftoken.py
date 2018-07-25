@@ -66,15 +66,17 @@ def deployment_status(nftoken, deploy, status):
   return inner_deployment_status
 
 @pytest.fixture
-def safe_transfer_from_with_data(status, deploy, nftoken, token_owner, agent, operator):
-  def inner_safe_transfer_from_with_data(current_sender, from_addr, to_addr, data):
+def safe_transfer_from_with_data(status, deploy, nftoken, token_owner, agent, operator, correct_token_id):
+  def inner_safe_transfer_from_with_data(current_sender, from_addr, to_addr, data, token_id):
     deploy(nftoken, "NFTokenMock", 5000000)
     tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
-    token_id = nftoken.contract.functions.token_id().call()
     data = data.encode()
     tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
-    assert status(tx_hash)
+    if token_id == correct_token_id:
+      assert status(tx_hash)
+    else:
+      assert status(tx_hash) == 0
     tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
     tx_hash = nftoken.contract.functions.safeTransferFrom(from_addr,
@@ -85,14 +87,16 @@ def safe_transfer_from_with_data(status, deploy, nftoken, token_owner, agent, op
   return inner_safe_transfer_from_with_data
 
 @pytest.fixture
-def safe_transfer_from_without_data(status, deploy, nftoken, token_owner, agent, operator):
-  def inner_safe_transfer_from_without_data(current_sender, from_addr, to_addr):
+def safe_transfer_from_without_data(status, deploy, nftoken, token_owner, agent, operator, correct_token_id):
+  def inner_safe_transfer_from_without_data(current_sender, from_addr, to_addr, token_id):
     deploy(nftoken, "NFTokenMock", 5000000)
     tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
-    token_id = nftoken.contract.functions.token_id().call()
     tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
-    assert status(tx_hash)
+    if token_id == correct_token_id:
+      assert status(tx_hash)
+    else:
+      assert status(tx_hash) == 0
     tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
     tx_hash = nftoken.contract.functions.safeTransferFrom(from_addr,
@@ -102,14 +106,16 @@ def safe_transfer_from_without_data(status, deploy, nftoken, token_owner, agent,
   return inner_safe_transfer_from_without_data
 
 @pytest.fixture
-def transfer_from(status, deploy, nftoken, token_owner, agent, operator):
-  def inner_transfer_from(current_sender, from_addr, to_addr):
+def transfer_from(status, deploy, nftoken, token_owner, agent, operator, correct_token_id):
+  def inner_transfer_from(current_sender, from_addr, to_addr, token_id):
     deploy(nftoken, "NFTokenMock", 5000000)
     tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
-    token_id = nftoken.contract.functions.token_id().call()
     tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
-    assert status(tx_hash)
+    if token_id == correct_token_id:
+      assert status(tx_hash)
+    else:
+      assert status(tx_hash) == 0
     tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
     tx_hash = nftoken.contract.functions.transferFrom(from_addr,
@@ -146,37 +152,43 @@ def test_deployment_succeeds_with_enough_gas(deployment_status):
 @pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
 @pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
 @pytest.mark.parametrize("data", ["empty_data", "data_example"])
-def test_safe_transfer_from_with_data(request, safe_transfer_from_with_data, current_sender, from_addr, data, token_owner, agent, operator):
+@pytest.mark.parametrize("token_id", ["correct_token_id", "incorrect_token_id"])
+def test_safe_transfer_from_with_data(request, safe_transfer_from_with_data, current_sender, from_addr, data, token_id, token_owner, agent, operator, correct_token_id):
   current_sender = request.getfixturevalue(current_sender)
   from_addr = request.getfixturevalue(from_addr)
   data = request.getfixturevalue(data)
+  token_id = request.getfixturevalue(token_id)
   to_addr = operator
-  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
-    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data)
+  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner and token_id == correct_token_id:
+    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data, token_id)
   else:
-    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data) == 0
+    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data, token_id) == 0
 
 @pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
 @pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
-def test_safe_transfer_from_without_data(request, safe_transfer_from_without_data, current_sender, from_addr, token_owner, agent, operator):
+@pytest.mark.parametrize("token_id", ["correct_token_id", "incorrect_token_id"])
+def test_safe_transfer_from_without_data(request, safe_transfer_from_without_data, current_sender, from_addr, token_id, token_owner, agent, operator, correct_token_id):
   current_sender = request.getfixturevalue(current_sender)
   from_addr = request.getfixturevalue(from_addr)
+  token_id = request.getfixturevalue(token_id)
   to_addr = operator
-  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
-    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr)
+  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner and token_id == correct_token_id:
+    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr, token_id)
   else:
-    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr) == 0
+    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr, token_id) == 0
 
 @pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
 @pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
-def test_transfer_from(request, transfer_from, current_sender, from_addr, token_owner, agent, operator):
+@pytest.mark.parametrize("token_id", ["correct_token_id", "incorrect_token_id"])
+def test_transfer_from(request, transfer_from, current_sender, from_addr, token_id, token_owner, agent, operator, correct_token_id):
   current_sender = request.getfixturevalue(current_sender)
   from_addr = request.getfixturevalue(from_addr)
+  token_id = request.getfixturevalue(token_id)
   to_addr = operator
-  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
-    assert transfer_from(current_sender, from_addr, to_addr)
+  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner and token_id == correct_token_id:
+    assert transfer_from(current_sender, from_addr, to_addr, token_id)
   else:
-    assert transfer_from(current_sender, from_addr, to_addr) == 0
+    assert transfer_from(current_sender, from_addr, to_addr, token_id) == 0
 
 @pytest.mark.parametrize("current_sender", ["token_owner", "operator", "no_credentials_sender"])
 @pytest.mark.parametrize("token_id", ["correct_token_id", "incorrect_token_id"])
