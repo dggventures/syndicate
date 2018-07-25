@@ -144,6 +144,14 @@ def set_approval_for_all(status, deploy, nftoken, token_owner, operator):
     return status(tx_hash)
   return inner_set_approval_for_all
 
+@pytest.fixture
+def mint_internal(status, deploy, nftoken, token_owner, operator):
+  def inner_mint_internal():
+    deploy(nftoken, "NFTokenMock", 5000000)
+    tx_hash = nftoken.contract.functions.mintInternalMock(operator).transact(tx_args(token_owner, gas=1000000))
+    return status(tx_hash)
+  return inner_mint_internal
+
 
 # General test cases functions
 
@@ -210,3 +218,6 @@ def test_approve(request, approve, current_sender, token_id, token_owner, operat
 
 def test_set_approval_for_all(set_approval_for_all):
   assert set_approval_for_all()
+
+def test_mint_internal(mint_internal):
+  assert mint_internal()
