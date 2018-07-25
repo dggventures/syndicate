@@ -31,6 +31,14 @@ def operator(web3_2):
 def no_credentials_sender(web3_2):
   return web3_2.eth.accounts[5]
 
+@pytest.fixture(scope="session")
+def data_example():
+  return "MessageData"
+
+@pytest.fixture(scope="session")
+def empty_data():
+  return ""
+
 @pytest.fixture
 def nftoken():
   return Contract()
@@ -50,13 +58,12 @@ def deployment_status(nftoken, deploy, status):
   return inner_deployment_status
 
 @pytest.fixture
-def safe_transfer_from(status, deploy, nftoken, token_owner, agent, operator):
-  def inner_safe_transfer_from(current_sender, from_addr, to_addr):
+def safe_transfer_from_with_data(status, deploy, nftoken, token_owner, agent, operator):
+  def inner_safe_transfer_from_with_data(current_sender, from_addr, to_addr, data):
     deploy(nftoken, "NFTokenMock", 5000000)
     tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
     token_id = nftoken.contract.functions.token_id().call()
-    data = ""
     data = data.encode()
     tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
     assert status(tx_hash)
@@ -67,7 +74,24 @@ def safe_transfer_from(status, deploy, nftoken, token_owner, agent, operator):
                                                           token_id,
                                                           data).transact(tx_args(current_sender, gas=1000000))
     return status(tx_hash)
-  return inner_safe_transfer_from
+  return inner_safe_transfer_from_with_data
+
+@pytest.fixture
+def safe_transfer_from_without_data(status, deploy, nftoken, token_owner, agent, operator):
+  def inner_safe_transfer_from_without_data(current_sender, from_addr, to_addr):
+    deploy(nftoken, "NFTokenMock", 5000000)
+    tx_hash = nftoken.contract.functions.mintInternalMock(token_owner).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    token_id = nftoken.contract.functions.token_id().call()
+    tx_hash = nftoken.contract.functions.approve(agent, token_id).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
+    assert status(tx_hash)
+    tx_hash = nftoken.contract.functions.safeTransferFrom(from_addr,
+                                                          to_addr,
+                                                          token_id).transact(tx_args(current_sender, gas=1000000))
+    return status(tx_hash)
+  return inner_safe_transfer_from_without_data
 
 
 # General test cases functions
@@ -84,11 +108,24 @@ def test_deployment_succeeds_with_enough_gas(deployment_status):
 
 @pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
 @pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
-def test_safe_transfer_from(request, safe_transfer_from, current_sender, from_addr, token_owner, agent, operator):
+@pytest.mark.parametrize("data", ["empty_data", "data_example"])
+def test_safe_transfer_from_with_data(request, safe_transfer_from_with_data, current_sender, from_addr, data, token_owner, agent, operator):
+  current_sender = request.getfixturevalue(current_sender)
+  from_addr = request.getfixturevalue(from_addr)
+  data = request.getfixturevalue(data)
+  to_addr = operator
+  if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
+    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data)
+  else:
+    assert safe_transfer_from_with_data(current_sender, from_addr, to_addr, data) == 0
+
+@pytest.mark.parametrize("current_sender", ["token_owner", "agent", "operator", "no_credentials_sender"])
+@pytest.mark.parametrize("from_addr", ["token_owner", "no_credentials_sender"])
+def test_safe_transfer_from_without_data(request, safe_transfer_from_without_data, current_sender, from_addr, token_owner, agent, operator):
   current_sender = request.getfixturevalue(current_sender)
   from_addr = request.getfixturevalue(from_addr)
   to_addr = operator
   if (current_sender == token_owner or current_sender == agent or current_sender == operator) and from_addr == token_owner:
-    assert safe_transfer_from(current_sender, from_addr, to_addr)
+    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr)
   else:
-    assert safe_transfer_from(current_sender, from_addr, to_addr) == 0
+    assert safe_transfer_from_without_data(current_sender, from_addr, to_addr) == 0
