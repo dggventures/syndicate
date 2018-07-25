@@ -44,6 +44,17 @@ def ether_sender(web3_2):
 def not_ether_sender(web3_2):
   return web3_2.eth.accounts[3]
 
+@pytest.fixture
+def multisig_sender(status, web3_2, owner, ether_sender):
+  path = os.path.abspath("../../../../../../MultisigWallet/MultisigWallet/deployment/build")
+  contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(path, "MultiSigWallet")
+  sender_nonce = web3_2.eth.getTransactionCount(owner)
+  contract_address = Contract.generate_contract_address(owner, sender_nonce)
+  multisig_wallet_contract = web3_2.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
+  tx_hash = multisig_wallet_contract.constructor([owner, ether_sender], 1).transact(transaction=tx_args(owner, gas=3900000))
+  status(tx_hash)
+  return multisig_wallet_contract
+
 @pytest.fixture(scope="session")
 def true():
   return True
@@ -61,9 +72,9 @@ def crowdsale():
   return Contract()
 
 @pytest.fixture
-def contract_from_address(web3_2, crowdsale_path):
-  def inner_contract_from_address(address, contract_name):
-    contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(crowdsale_path, contract_name)
+def contract_from_address(web3_2):
+  def inner_contract_from_address(address, contract_name, path):
+    contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(path, contract_name)
     contract = web3_2.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
     return contract
   return inner_contract_from_address
@@ -176,12 +187,12 @@ def whitelist(status, deploy, syndicatev2):
   return inner_whitelist
 
 @pytest.fixture
-def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address):
+def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address, crowdsale_path):
   def inner_withdraw_tokens(current_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
-    crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale")
+    crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale", crowdsale_path)
     tx_hash = crowdsale_contract.functions.setTransferAgent(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
     tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
@@ -245,6 +256,83 @@ def set_approval_for_all(status, deploy, syndicatev2, owner):
     return status(tx_hash)
   return inner_set_approval_for_all
 
+
+@pytest.fixture
+def send_ether_and_verify(deploy, syndicatev2, owner, status, config, web3_2):
+  def inner_send_ether_and_verify(current_sender):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    data = ""
+    data = data.encode()
+    amount = 5
+    wei_amount = web3_2.toWei(amount, "ether")
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    assert status(tx_hash)
+    if web3_2.isAddress(current_sender):
+      tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
+                                            "to": syndicatev2.contract.address,
+                                            "value": wei_amount,
+                                            "gas": 500000})
+    else:
+      multisig_wallet_contract = current_sender
+      tx_hash = multisig_wallet_contract.functions.submitTransaction(syndicatev2.contract.address,
+                                                                     wei_amount,
+                                                                     data).transact(tx_args(owner, gas=1500000))
+      current_sender = current_sender.address
+    assert status(tx_hash)
+    nftoken_balance = syndicatev2.contract.functions.balanceOf(current_sender).call()
+    assert nftoken_balance
+    config_dict = config(int(datetime.now().timestamp()) + 6)
+    tranches_amount = len(config_dict["tranches"]) // 4
+    print(type(tranches_amount))
+    tranches = range(tranches_amount)
+    tokens_per_wei = config_dict["tranches"][4*tranches[0] + 3]
+    major_fee = (wei_amount * 6) / (10 * 11)
+    minor_fee = (wei_amount * 4) / (10 * 11)
+    expected_erc20token_balance = (int(wei_amount - major_fee - minor_fee)) * tokens_per_wei
+    token_id = syndicatev2.contract.functions.tokenOfOwnerByIndex(current_sender, 0).call()
+    actual_erc20token_balance = syndicatev2.contract.functions.get_token_balance(token_id).call()
+    print("Expected:", expected_erc20token_balance)
+    print("Actual:", actual_erc20token_balance)
+    return expected_erc20token_balance == actual_erc20token_balance
+  return inner_send_ether_and_verify
+
+@pytest.fixture
+def send_ether_with_multisig_and_verify(deploy, syndicatev2, owner, status, web3_2):
+  def inner_send_ether_with_multisig_and_verify(multisig_wallet_contract):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    data = ""
+    data = data.encode()
+    amount = 5
+    wei_amount = web3_2.toWei(amount, "ether")
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    assert status(tx_hash)
+    tx_hash = multisig_wallet_contract.functions.submitTransaction(syndicatev2.contract.address,
+                                                                   wei_amount,
+                                                                   data).transact(tx_args(owner, gas=1500000))
+    assert status(tx_hash)
+    purchase_pool = syndicatev2.contract.functions.purchase_pool().call()
+    total_tokens = syndicatev2.contract.functions.total_tokens().call()
+    token_balance = syndicatev2.contract.functions.token_balance().call()
+    # owneroftoken = syndicatev2.contract.functions.ownerOf(0).call()
+    totalsupply = syndicatev2.contract.functions.totalSupply().call()
+    nftoken_balance = syndicatev2.contract.functions.balanceOf(multisig_wallet_contract.address).call()
+    print("Purchase Pool:", purchase_pool)
+    print("Total eip20tokens in Syndicatev2:", total_tokens)
+    print("Syndicatev2's eip20tokens balance:", token_balance)
+    # print("Owner of NFToken 0:", owneroftoken)
+    print("Multisig Address:", multisig_wallet_contract.address)
+    print("Total supply of NFTokens:", totalsupply)
+    print("NFTokens balance of Multisig:", nftoken_balance)
+    assert nftoken_balance
+    major_fee = (wei_amount * 6) / (10 * 11)
+    minor_fee = (wei_amount * 4) / (10 * 11)
+    expected_erc20token_balance = (int(wei_amount - major_fee - minor_fee)) * 410
+    token_id = syndicatev2.contract.functions.tokenOfOwnerByIndex(current_sender, 0).call()
+    actual_erc20token_balance = syndicatev2.contract.functions.get_token_balance(token_id).call()
+    print("Expected:", expected_erc20token_balance)
+    print("Actual:", actual_erc20token_balance)
+    return expected_erc20token_balance == actual_erc20token_balance
+  return inner_send_ether_with_multisig_and_verify
 
 # General test cases functions
 
@@ -345,4 +433,10 @@ def test_set_approval_for_all(set_approval_for_all, ether_sender):
 
 # Test functions for the doc's special cases
 
+@pytest.mark.parametrize("current_sender", ["ether_sender", "multisig_sender"])
+def test_sending_ether_and_verification(request, send_ether_and_verify, current_sender):
+  current_sender = request.getfixturevalue(current_sender)
+  assert send_ether_and_verify(current_sender)
 
+def test_sending_ether_with_multisig_and_verify(send_ether_with_multisig_and_verify, multisig_sender):
+  assert send_ether_with_multisig_and_verify(multisig_sender)
