@@ -136,6 +136,14 @@ def approve(status, deploy, nftoken, token_owner, agent, operator):
     return status(tx_hash)
   return inner_approve
 
+@pytest.fixture
+def set_approval_for_all(status, deploy, nftoken, token_owner, operator):
+  def inner_set_approval_for_all():
+    deploy(nftoken, "NFTokenMock", 5000000)
+    tx_hash = nftoken.contract.functions.setApprovalForAll(operator, True).transact(tx_args(token_owner, gas=1000000))
+    return status(tx_hash)
+  return inner_set_approval_for_all
+
 
 # General test cases functions
 
@@ -199,3 +207,6 @@ def test_approve(request, approve, current_sender, token_id, token_owner, operat
     assert approve(current_sender, token_id)
   else:
     assert approve(current_sender, token_id) == 0
+
+def test_set_approval_for_all(set_approval_for_all):
+  assert set_approval_for_all()
