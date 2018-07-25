@@ -297,32 +297,45 @@ def send_ether_and_verify(deploy, syndicatev2, owner, status, config, web3_2):
   return inner_send_ether_and_verify
 
 @pytest.fixture
-def send_ether_with_multisig_and_verify(deploy, syndicatev2, owner, status, web3_2):
+def send_ether_with_multisig_and_verify(deploy, syndicatev2, owner, status, web3_2, get_tx_receipt):
   def inner_send_ether_with_multisig_and_verify(multisig_wallet_contract):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     data = ""
     data = data.encode()
     amount = 5
     wei_amount = web3_2.toWei(amount, "ether")
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(2060000).transact(tx_args(owner, gas=50000))
     assert status(tx_hash)
     tx_hash = multisig_wallet_contract.functions.submitTransaction(syndicatev2.contract.address,
                                                                    wei_amount,
-                                                                   data).transact(tx_args(owner, gas=1500000))
+                                                                   data).transact(tx_args(owner, gas=15000000))
     assert status(tx_hash)
-    purchase_pool = syndicatev2.contract.functions.purchase_pool().call()
-    total_tokens = syndicatev2.contract.functions.total_tokens().call()
-    token_balance = syndicatev2.contract.functions.token_balance().call()
+    # receipt = get_tx_receipt(tx_hash)
+    # rich_logs_execution = multisig_wallet_contract.events.Execution(0).processReceipt(receipt)
+    # rich_logs_submission = multisig_wallet_contract.events.Submission(0).processReceipt(receipt)
+    # rich_logs_confirmation = multisig_wallet_contract.events.Confirmation(owner, 0).processReceipt(receipt)
+    # rich_logs_executionfailure = multisig_wallet_contract.events.ExecutionFailure(0).processReceipt(receipt)
+    # transactions = multisig_wallet_contract.functions.transactions(0).call()
+    # print(receipt)
+    # print(tx_hash.hex())
+    # print(transactions)
+    # print(rich_logs_execution)
+    # print(rich_logs_submission)
+    # print(rich_logs_confirmation)
+    # print(rich_logs_executionfailure)
+    # purchase_pool = syndicatev2.contract.functions.purchase_pool().call()
+    # total_tokens = syndicatev2.contract.functions.total_tokens().call()
+    # token_balance = syndicatev2.contract.functions.token_balance().call()
     # owneroftoken = syndicatev2.contract.functions.ownerOf(0).call()
-    totalsupply = syndicatev2.contract.functions.totalSupply().call()
+    # totalsupply = syndicatev2.contract.functions.totalSupply().call()
     nftoken_balance = syndicatev2.contract.functions.balanceOf(multisig_wallet_contract.address).call()
-    print("Purchase Pool:", purchase_pool)
-    print("Total eip20tokens in Syndicatev2:", total_tokens)
-    print("Syndicatev2's eip20tokens balance:", token_balance)
+    # print("Purchase Pool:", purchase_pool)
+    # print("Total eip20tokens in Syndicatev2:", total_tokens)
+    # print("Syndicatev2's eip20tokens balance:", token_balance)
     # print("Owner of NFToken 0:", owneroftoken)
-    print("Multisig Address:", multisig_wallet_contract.address)
-    print("Total supply of NFTokens:", totalsupply)
-    print("NFTokens balance of Multisig:", nftoken_balance)
+    # print("Multisig Address:", multisig_wallet_contract.address)
+    # print("Total supply of NFTokens:", totalsupply)
+    # print("NFTokens balance of Multisig:", nftoken_balance)
     assert nftoken_balance
     major_fee = (wei_amount * 6) / (10 * 11)
     minor_fee = (wei_amount * 4) / (10 * 11)
