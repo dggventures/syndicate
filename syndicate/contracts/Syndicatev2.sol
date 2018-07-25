@@ -318,7 +318,7 @@ contract Syndicatev2 is Haltable, NFToken {
 
   function transferFrom(address from, address to, uint256 token_id) public {
     if (now >= first_withdraw + 1 weeks && msg.sender == owner && !purchasers[from].owner_retriever_disabled) {
-      super.commitTransfer(from, to, token_id);
+      commitTransfer(from, to, token_id);
     } else {
       super.transferFrom(from, to, token_id);
     }
