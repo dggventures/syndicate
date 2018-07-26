@@ -29,28 +29,28 @@ def config():
   return inner_config
 
 @pytest.fixture(scope="session")
-def owner(web3_2):
-  return web3_2.eth.accounts[0]
+def owner(unlocked_accounts):
+  return unlocked_accounts[0]
 
 @pytest.fixture(scope="session")
-def not_owner(web3_2):
-  return web3_2.eth.accounts[1]
+def not_owner(unlocked_accounts):
+  return unlocked_accounts[1]
 
 @pytest.fixture(scope="session")
-def ether_sender(web3_2):
-  return web3_2.eth.accounts[2]
+def ether_sender(unlocked_accounts):
+  return unlocked_accounts[2]
 
 @pytest.fixture(scope="session")
-def not_ether_sender(web3_2):
-  return web3_2.eth.accounts[3]
+def not_ether_sender(unlocked_accounts):
+  return unlocked_accounts[3]
 
 @pytest.fixture
-def multisig_sender(status, web3_2, owner, ether_sender):
+def multisig_sender(status, web3, owner, ether_sender):
   path = os.path.abspath("../../../../../../MultisigWallet/MultisigWallet/deployment/build")
   contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(path, "MultiSigWallet")
-  sender_nonce = web3_2.eth.getTransactionCount(owner)
+  sender_nonce = web3.eth.getTransactionCount(owner)
   contract_address = Contract.generate_contract_address(owner, sender_nonce)
-  multisig_wallet_contract = web3_2.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
+  multisig_wallet_contract = web3.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
   tx_hash = multisig_wallet_contract.constructor([owner, ether_sender], 1).transact(transaction=tx_args(owner, gas=3900000))
   status(tx_hash)
   return multisig_wallet_contract
@@ -72,33 +72,18 @@ def crowdsale():
   return Contract()
 
 @pytest.fixture
-def contract_from_address(web3_2):
+def contract_from_address(web3):
   def inner_contract_from_address(address, contract_name, path):
     contract_abi, contract_bytecode = Contract.get_abi_and_bytecode(path, contract_name)
-    contract = web3_2.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
+    contract = web3.eth.contract(address=address, abi=contract_abi, bytecode=contract_bytecode)
     return contract
   return inner_contract_from_address
 
 @pytest.fixture
-def get_balance_after_sending_ether(deploy, syndicatev2, web3_2, status, owner):
-  def inner_get_balance_after_sending_ether():
-    deploy(syndicatev2, "Syndicatev2", 3000000)
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(300000).transact(tx_args(owner, gas=900000))
-    assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": owner,
-                                          "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(20, "ether"),
-                                          "gas": 500000})
-    assert status(tx_hash)
-    balance = web3_2.fromWei(web3_2.eth.getBalance(syndicatev2.contract.address), "ether")
-    return balance
-  return inner_get_balance_after_sending_ether
-
-@pytest.fixture
-def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path):
+def deployed_crowdsale(crowdsale, owner, config, status, crowdsale_path, web3):
   def inner_deployed_crowdsale():
-    config_dict = config(int(datetime.now().timestamp()) + 6)
-    tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000),)
+    config_dict = config(int(datetime.now().timestamp()) + 3)
+    tx_hash = crowdsale.deploy(crowdsale_path, "Crowdsale", tx_args(owner, gas=5000000), web3,)
     assert status(tx_hash)
     tx_hash = crowdsale.contract.functions.configurationCrowdsale(config_dict["MW_address"],
                                                                   config_dict["start_time"],
@@ -121,7 +106,7 @@ def eip20token_address(deployed_crowdsale):
   return token_address
 
 @pytest.fixture
-def deploy(owner, address_zero, wait, deployed_crowdsale):
+def deploy(owner, address_zero, wait, deployed_crowdsale, web3):
   def inner_deploy(contract, contract_name, gas):
     crowdsale = deployed_crowdsale()
     token_address = crowdsale.contract.functions.token().call()
@@ -130,6 +115,7 @@ def deploy(owner, address_zero, wait, deployed_crowdsale):
     tx_hash = contract.deploy("../../build/",
                               contract_name,
                               tx_args(owner, gas=gas),
+                              web3,
                               token_address,
                               crowdsale.contract.address,
                               "0x8ffC991Fc4C4fC53329Ad296C1aFe41470cFFbb3",
@@ -187,7 +173,7 @@ def whitelist(status, deploy, syndicatev2):
   return inner_whitelist
 
 @pytest.fixture
-def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, contract_from_address, crowdsale_path):
+def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3, contract_from_address, crowdsale_path):
   def inner_withdraw_tokens(current_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
@@ -195,9 +181,9 @@ def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, co
     crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale", crowdsale_path)
     tx_hash = crowdsale_contract.functions.setTransferAgent(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
     assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
+    tx_hash = web3.eth.sendTransaction({"from": ether_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(5, "ether"),
+                                          "value": web3.toWei(5, "ether"),
                                           "gas": 2000000})
     assert status(tx_hash)
     tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
@@ -205,7 +191,7 @@ def withdraw_tokens(status, deploy, syndicatev2, ether_sender, owner, web3_2, co
   return inner_withdraw_tokens
 
 @pytest.fixture
-def send_ether(status, deploy, syndicatev2, web3_2, owner, ether_sender):
+def send_ether(status, deploy, syndicatev2, web3, owner, ether_sender):
   def inner_send_ether(enforce_whitelist, whitelisted, transfer_amount, gas, purchase_active):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     if gas:
@@ -224,26 +210,24 @@ def send_ether(status, deploy, syndicatev2, web3_2, owner, ether_sender):
     if not purchase_active:
       tx_hash = syndicatev2.contract.functions.set_purchasing_availability(False).transact(tx_args(owner, gas=50000))
       assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
+    tx_hash = web3.eth.sendTransaction({"from": ether_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(amount, "ether"),
+                                          "value": web3.toWei(amount, "ether"),
                                           "gas": 500000})
     return status(tx_hash)
   return inner_send_ether
 
 @pytest.fixture
-def transfer_from(status, deploy, syndicatev2, ether_sender, web3_2, owner):
+def transfer_from(status, deploy, syndicatev2, ether_sender, web3, owner):
   def inner_transfer_from(from_addr, to_addr, token_id, current_tx_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
     tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
     assert status(tx_hash)
-    tx_hash = web3_2.eth.sendTransaction({"from": ether_sender,
+    tx_hash = web3.eth.sendTransaction({"from": ether_sender,
                                           "to": syndicatev2.contract.address,
-                                          "value": web3_2.toWei(5, "ether"),
+                                          "value": web3.toWei(5, "ether"),
                                           "gas": 500000})
     assert status(tx_hash)
-    print(str(type(from_addr)) + "\n" + str(type(to_addr)) + "\n" + str(type(token_id)) + "\n")
-    print(from_addr + "\n" + to_addr + "\n" + str(token_id) + "\n")
     tx_hash = syndicatev2.contract.functions.transferFrom(from_addr, to_addr, token_id).transact(tx_args(current_tx_sender, gas=1000000))
     return status(tx_hash)
   return inner_transfer_from
@@ -258,94 +242,49 @@ def set_approval_for_all(status, deploy, syndicatev2, owner):
 
 
 @pytest.fixture
-def send_ether_and_verify(deploy, syndicatev2, owner, status, config, web3_2):
+def send_ether_and_verify(deploy, syndicatev2, owner, status, config, web3):
   def inner_send_ether_and_verify(current_sender):
     deploy(syndicatev2, "Syndicatev2", 5000000)
-    data = ""
-    data = data.encode()
+    data = "".encode()
     amount = 5
-    wei_amount = web3_2.toWei(amount, "ether")
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(260000).transact(tx_args(owner, gas=50000))
+    wei_amount = web3.toWei(amount, "ether")
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=50000))
     assert status(tx_hash)
-    if web3_2.isAddress(current_sender):
-      tx_hash = web3_2.eth.sendTransaction({"from": current_sender,
-                                            "to": syndicatev2.contract.address,
-                                            "value": wei_amount,
-                                            "gas": 500000})
+    if web3.isAddress(current_sender):
+      tx_hash = web3.eth.sendTransaction({"from": current_sender,
+                                          "to": syndicatev2.contract.address,
+                                          "value": wei_amount,
+                                          "gas": 5000000})
     else:
       multisig_wallet_contract = current_sender
+      tx_hash = web3.eth.sendTransaction({"from": owner,
+                                          "to": multisig_wallet_contract.address,
+                                          "value": wei_amount * 2,
+                                          "gas": 5000000})
+      assert status(tx_hash)
       tx_hash = multisig_wallet_contract.functions.submitTransaction(syndicatev2.contract.address,
                                                                      wei_amount,
-                                                                     data).transact(tx_args(owner, gas=1500000))
+                                                                     data).transact(tx_args(owner, gas=5000000))
       current_sender = current_sender.address
     assert status(tx_hash)
     nftoken_balance = syndicatev2.contract.functions.balanceOf(current_sender).call()
     assert nftoken_balance
     config_dict = config(int(datetime.now().timestamp()) + 6)
     tranches_amount = len(config_dict["tranches"]) // 4
-    print(type(tranches_amount))
     tranches = range(tranches_amount)
     tokens_per_wei = config_dict["tranches"][4*tranches[0] + 3]
-    major_fee = (wei_amount * 6) / (10 * 11)
-    minor_fee = (wei_amount * 4) / (10 * 11)
-    expected_erc20token_balance = (int(wei_amount - major_fee - minor_fee)) * tokens_per_wei
+    major_fee = (wei_amount * 6) // (10 * 11)
+    minor_fee = (wei_amount * 4) // (10 * 11)
+    expected_erc20token_balance = (wei_amount - major_fee - minor_fee) * tokens_per_wei
     token_id = syndicatev2.contract.functions.tokenOfOwnerByIndex(current_sender, 0).call()
     actual_erc20token_balance = syndicatev2.contract.functions.get_token_balance(token_id).call()
     print("Expected:", expected_erc20token_balance)
-    print("Actual:", actual_erc20token_balance)
-    return expected_erc20token_balance == actual_erc20token_balance
+    print("  Actual:", actual_erc20token_balance)
+    assert expected_erc20token_balance == actual_erc20token_balance
+    balance = web3.fromWei(web3.eth.getBalance(syndicatev2.contract.address), "ether")
+    return not balance
   return inner_send_ether_and_verify
 
-@pytest.fixture
-def send_ether_with_multisig_and_verify(deploy, syndicatev2, owner, status, web3_2, get_tx_receipt):
-  def inner_send_ether_with_multisig_and_verify(multisig_wallet_contract):
-    deploy(syndicatev2, "Syndicatev2", 5000000)
-    data = ""
-    data = data.encode()
-    amount = 5
-    wei_amount = web3_2.toWei(amount, "ether")
-    tx_hash = syndicatev2.contract.functions.set_transfer_gas(2060000).transact(tx_args(owner, gas=50000))
-    assert status(tx_hash)
-    tx_hash = multisig_wallet_contract.functions.submitTransaction(syndicatev2.contract.address,
-                                                                   wei_amount,
-                                                                   data).transact(tx_args(owner, gas=15000000))
-    assert status(tx_hash)
-    # receipt = get_tx_receipt(tx_hash)
-    # rich_logs_execution = multisig_wallet_contract.events.Execution(0).processReceipt(receipt)
-    # rich_logs_submission = multisig_wallet_contract.events.Submission(0).processReceipt(receipt)
-    # rich_logs_confirmation = multisig_wallet_contract.events.Confirmation(owner, 0).processReceipt(receipt)
-    # rich_logs_executionfailure = multisig_wallet_contract.events.ExecutionFailure(0).processReceipt(receipt)
-    # transactions = multisig_wallet_contract.functions.transactions(0).call()
-    # print(receipt)
-    # print(tx_hash.hex())
-    # print(transactions)
-    # print(rich_logs_execution)
-    # print(rich_logs_submission)
-    # print(rich_logs_confirmation)
-    # print(rich_logs_executionfailure)
-    # purchase_pool = syndicatev2.contract.functions.purchase_pool().call()
-    # total_tokens = syndicatev2.contract.functions.total_tokens().call()
-    # token_balance = syndicatev2.contract.functions.token_balance().call()
-    # owneroftoken = syndicatev2.contract.functions.ownerOf(0).call()
-    # totalsupply = syndicatev2.contract.functions.totalSupply().call()
-    nftoken_balance = syndicatev2.contract.functions.balanceOf(multisig_wallet_contract.address).call()
-    # print("Purchase Pool:", purchase_pool)
-    # print("Total eip20tokens in Syndicatev2:", total_tokens)
-    # print("Syndicatev2's eip20tokens balance:", token_balance)
-    # print("Owner of NFToken 0:", owneroftoken)
-    # print("Multisig Address:", multisig_wallet_contract.address)
-    # print("Total supply of NFTokens:", totalsupply)
-    # print("NFTokens balance of Multisig:", nftoken_balance)
-    assert nftoken_balance
-    major_fee = (wei_amount * 6) / (10 * 11)
-    minor_fee = (wei_amount * 4) / (10 * 11)
-    expected_erc20token_balance = (int(wei_amount - major_fee - minor_fee)) * 410
-    token_id = syndicatev2.contract.functions.tokenOfOwnerByIndex(current_sender, 0).call()
-    actual_erc20token_balance = syndicatev2.contract.functions.get_token_balance(token_id).call()
-    print("Expected:", expected_erc20token_balance)
-    print("Actual:", actual_erc20token_balance)
-    return expected_erc20token_balance == actual_erc20token_balance
-  return inner_send_ether_with_multisig_and_verify
 
 # General test cases functions
 
@@ -354,7 +293,7 @@ def test_deployment_raises_error_with_intrinsic_gas_too_low(deployment_status):
     deployment_status(50000)
 
 def test_deployment_fails_with_not_enough_gas(deployment_status):
-  assert deployment_status(500000) == 0
+  assert deployment_status(1000000) == 0
 
 def test_deployment_succeeds_with_enough_gas(deployment_status):
   assert deployment_status(9000000)
@@ -366,9 +305,6 @@ def test_set_transfer_gas(set_transfer_gas, current_owner, owner, request):
     assert set_transfer_gas(current_owner)
   else:
     assert set_transfer_gas(current_owner) == 0
-
-def test_there_is_no_token_balance_of_contract_after_sending_ether(get_balance_after_sending_ether):
-  assert get_balance_after_sending_ether() == 0
 
 @pytest.mark.parametrize("token_address", ["eip20token_address", "address_zero"])
 @pytest.mark.parametrize("current_owner", ["owner", "not_owner"])
@@ -451,5 +387,3 @@ def test_sending_ether_and_verification(request, send_ether_and_verify, current_
   current_sender = request.getfixturevalue(current_sender)
   assert send_ether_and_verify(current_sender)
 
-def test_sending_ether_with_multisig_and_verify(send_ether_with_multisig_and_verify, multisig_sender):
-  assert send_ether_with_multisig_and_verify(multisig_sender)
