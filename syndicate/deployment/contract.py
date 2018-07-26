@@ -14,11 +14,13 @@ class Contract:
     self.args, unknown = parse_args(sys.argv[1:])
     self.contract = None
   
-  def instantiate_contract(self, sender_address, compiled_path, contract_name):
+  def instantiate_contract(self, sender_address, compiled_path, contract_name, web3=None):
+    if web3 is None:
+      web3 = self.web3
     (contract_abi, contract_bytecode) = self.get_abi_and_bytecode(compiled_path, contract_name)
-    sender_nonce = self.web3.eth.getTransactionCount(sender_address)
+    sender_nonce = web3.eth.getTransactionCount(sender_address)
     contract_address = self.generate_contract_address(sender_address, sender_nonce)
-    contract = self.web3.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
     return contract
   
   def load_address(self, log_path):
@@ -34,8 +36,10 @@ class Contract:
     contract_address = self.load_address(log_path)
     self.contract = self.web3.eth.contract(address=contract_address, abi=contract_abi, bytecode=contract_bytecode)
   
-  def deploy(self, path, contract_name, tx_args, *constructor_args):
-    self.contract = self.instantiate_contract(tx_args["from"], path, contract_name)
+  def deploy(self, path, contract_name, tx_args, web3=None, *constructor_args):
+    if web3 is None:
+      web3 = self.web3
+    self.contract = self.instantiate_contract(tx_args["from"], path, contract_name, web3)
     tx_hash = self.contract.constructor(*constructor_args).transact(transaction=tx_args)
     return tx_hash
   
