@@ -285,6 +285,33 @@ def send_ether_and_verify(deploy, syndicatev2, owner, status, config, web3):
     return not balance
   return inner_send_ether_and_verify
 
+@pytest.fixture
+def withdraw_tokens_just_once(status, deploy, syndicatev2, ether_sender, owner, web3, contract_from_address, crowdsale_path):
+  def inner_withdraw_tokens_just_once(current_sender):
+    deploy(syndicatev2, "Syndicatev2", 5000000)
+    tx_hash = syndicatev2.contract.functions.set_transfer_gas(2000000).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    crowdsale_contract = contract_from_address(syndicatev2.contract.functions.purchase_address().call(), "Crowdsale", crowdsale_path)
+    crowdsale_token_contract = contract_from_address(crowdsale_contract.functions.token().call(), "CrowdsaleToken", crowdsale_path)
+    tx_hash = crowdsale_contract.functions.setTransferAgent(syndicatev2.contract.address, True).transact(tx_args(owner, gas=900000))
+    assert status(tx_hash)
+    tx_hash = web3.eth.sendTransaction({"from": ether_sender,
+                                          "to": syndicatev2.contract.address,
+                                          "value": web3.toWei(5, "ether"),
+                                          "gas": 2000000})
+    assert status(tx_hash)
+    tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
+    assert status(tx_hash)
+    token_id = syndicatev2.contract.functions.tokenOfOwnerByIndex(current_sender, 0).call()
+    balance = syndicatev2.contract.functions.get_token_balance(token_id).call()
+    assert not balance
+    token_balance_before_second_withdrawal = crowdsale_token_contract.functions.balanceOf(current_sender).call()
+    tx_hash = syndicatev2.contract.functions.withdraw_tokens().transact(tx_args(current_sender, gas=1900000))
+    assert status(tx_hash)
+    token_balance_after_second_withdrawal = crowdsale_token_contract.functions.balanceOf(current_sender).call()
+    return token_balance_after_second_withdrawal - token_balance_before_second_withdrawal
+  return inner_withdraw_tokens_just_once
+
 
 # General test cases functions
 
@@ -387,3 +414,5 @@ def test_sending_ether_and_verification(request, send_ether_and_verify, current_
   current_sender = request.getfixturevalue(current_sender)
   assert send_ether_and_verify(current_sender)
 
+def test_withdraw_tokens_just_once(withdraw_tokens_just_once, ether_sender):
+  assert withdraw_tokens_just_once(ether_sender) == 0
