@@ -11,7 +11,6 @@ contract NFTokenMock is NFToken {
 
   /// @dev Mint an NFT
   /// @param receiver Address of the owner of the newly minted NFT
-  /// @return Token ID
   function mintInternalMock(address receiver) public {
     token_id = mintInternal(receiver);
   }
