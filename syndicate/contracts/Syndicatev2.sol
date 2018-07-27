@@ -145,8 +145,8 @@ contract Syndicatev2 is Haltable, NFToken {
   address public minor_partner_address;
   // Gas used for transfers.
   uint public gas = 1000;
-  // Moment in time when the first withdrawing occurred. Initialized as 0.
-  uint public first_withdraw = 0;
+  // Timestamp of the first withdrawal.
+  uint public first_withdrawal = 0;
   // How much money was purchased in the contract
   uint public purchase_pool = 0;
   // The amount of tokens the contract has received in its lifetime
@@ -249,6 +249,8 @@ contract Syndicatev2 is Haltable, NFToken {
     token_history[token_contract] = true;
   }
 
+  /* Function to change the target purchase address.
+  */
   function update_purchase_address(address purchase_addr) public onlyOwner {
     require(purchase_addr != 0);
     purchase_address = purchase_addr;
@@ -277,18 +279,20 @@ contract Syndicatev2 is Haltable, NFToken {
     purchasers[purchaser].whitelisted = allowed;
   }
 
-  function set_purchasing_availability(bool allowed) public onlyOwner {
+  /* Function to set the availability for the purchasers to purchase.
+  */
+  function set_purchase_availability(bool allowed) public onlyOwner {
     purchase_enabled = allowed;
   }
 
-  /* Function to get the token balance of a purchaser
+  /* Function to get the token balance of a purchaser.
   */
   function get_token_balance(uint token_id) public view returns (uint) {
     uint purchaser_tokens = balances[token_id].purchased.mul(total_tokens).div(purchase_pool);
     return purchaser_tokens.sub(balances[token_id].withdrawn_tokens);
   }
 
-  /* Helper function for purchaser token withdrawal
+  /* Helper function for purchaser token withdrawal.
   */
   function tokens_to_withdraw() internal returns (uint) {
     uint token_id = get_token_id();
@@ -299,36 +303,45 @@ contract Syndicatev2 is Haltable, NFToken {
     return tokens;
   }
 
-  /* Purchasers can withdraw their tokens using this function
+  /* Purchasers can withdraw their tokens using this function.
   */
   function withdraw_tokens() public {
-    if (first_withdraw == 0) {
-      first_withdraw = now;
+    // Save timestamp of first withdrawal to let the owner retrive tokens after one week.
+    if (first_withdrawal == 0) {
+      first_withdrawal = now;
     }
     uint tokens = tokens_to_withdraw();
     require(token.transfer(msg.sender, tokens));
   }
 
-  /* We can use this function to move unwanted tokens in the contract
+  /* We can use this function to move unwanted tokens in the contract.
   */
   function approve_unwanted_tokens(EIP20Token token_contract, address dest, uint value) public onlyOwner {
     require(!token_history[token_contract]);
     require(token_contract.approve(dest, value));
   }
 
+  /* The owner can retrive tokens one week after the first withdrawal.
+  */
   function transferFrom(address from, address to, uint256 token_id) public {
-    if (now >= first_withdraw + 1 weeks && msg.sender == owner && !purchasers[from].owner_retriever_disabled) {
+    if (now >= first_withdrawal + 1 weeks && msg.sender == owner && !purchasers[from].owner_retriever_disabled) {
       commitTransfer(from, to, token_id);
     } else {
       super.transferFrom(from, to, token_id);
     }
   }
 
+  /* Enabling or disabling approval for an operator deactivates the feature
+   * which allows the owner to retrieve the sender's tokens.
+  */
   function setApprovalForAll(address operator, bool approved) public {
     purchasers[msg.sender].owner_retriever_disabled = true;
     super.setApprovalForAll(operator, approved);
   }
 
+  /**
+   * Purchase state machine management.
+   */
   function getState() public view returns (State) {
     if (purchase_enabled) return State.Active;
     else return State.Inactive;
@@ -340,6 +353,10 @@ contract Syndicatev2 is Haltable, NFToken {
     uint token_id = get_token_id();
     execute_transfer(msg.value, token_id);
   }
+
+  //
+  // Modifiers
+  //
 
   modifier inState(State state) {
     require(getState() == state);
