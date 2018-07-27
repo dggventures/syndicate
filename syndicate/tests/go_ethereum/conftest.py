@@ -13,7 +13,8 @@ from eth_utils import (
 )
 
 from web3 import Web3
-from web3.auto import w3
+# from web3.auto import w3
+from web3.middleware import geth_poa_middleware
 
 import tests.go_ethereum.common
 
@@ -151,11 +152,15 @@ def wait_for_socket(ipc_path, timeout=30):
 def web3(ipc_file, geth_process):
   ipc_path = str(os.path.abspath(ipc_file))
   wait_for_socket(ipc_path)
-  return Web3(Web3.IPCProvider(ipc_path))
-
-@pytest.fixture(scope=WEB3_SCOPE)
-def web3_2():
+  # Injection of poa middleware
+  w3 = Web3(Web3.IPCProvider(ipc_path))
+  w3.middleware_stack.inject(geth_poa_middleware, layer=0)
   return w3
+
+# @pytest.fixture(scope=WEB3_SCOPE)
+# def web3_2():
+#   w3.middleware_stack.inject(geth_poa_middleware, layer=0)
+#   return w3
 
 @pytest.fixture(scope=WEB3_SCOPE)
 def unlocked_accounts(web3):
@@ -177,9 +182,9 @@ def wait(get_tx_receipt):
   return inner_wait
 
 @pytest.fixture(scope=WEB3_SCOPE)
-def get_tx_receipt(web3_2):
+def get_tx_receipt(web3):
   def inner_get_tx_receipt(tx_hash):
-    return web3_2.eth.waitForTransactionReceipt(tx_hash, timeout=10)
+    return tests.go_ethereum.common.mine_transaction_hash(web3, tx_hash)
   return inner_get_tx_receipt
 
 # unused

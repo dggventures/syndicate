@@ -54,7 +54,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @notice Count NFTs tracked by this contract
   /// @return A count of valid NFTs tracked by this contract, where each one of
   ///  them has an assigned and queryable owner not equal to the zero address
-  function totalSupply() external view returns (uint256) {
+  function totalSupply() public view returns (uint256) {
     return total_tokens;
   }
 
@@ -63,7 +63,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @param to The new owner
   /// @param token_id The NFT to transfer
   /// @param data Additional data with no specified format, sent in call to `to`
-  function safeTransferFrom(address from, address to, uint256 token_id, bytes data) public {
+  function safeTransferFrom(address from, address to, uint256 token_id, bytes data) public canTransfer(token_id) {
     // @dev Do not reorder these. The call of untrusted code should be done at the very end.
     commitTransfer(from, to, token_id);
     notifyTransfer(from, to, token_id, data);
@@ -83,12 +83,11 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   /// @param from The current owner of the NFT
   /// @param to The new owner
   /// @param token_id The NFT to transfer
-  function transferFrom(address from, address to, uint256 token_id) external {
+  function transferFrom(address from, address to, uint256 token_id) public canTransfer(token_id) {
     commitTransfer(from, to, token_id);
   }
 
-  function commitTransfer(address from, address to, uint256 token_id) private 
-  validAddress(to) validIndex(token_id) canTransfer(token_id) {
+  function commitTransfer(address from, address to, uint256 token_id) internal validAddress(to) validIndex(token_id) {
     // Verify ownership of the token
     require(from == tokens[token_id].owner);
 
@@ -137,7 +136,7 @@ contract NFToken is ERC165, ERC721, ERC721Enumerable, ERC721Metadata {
   ///  all your assets.
   /// @param operator Address to add to the set of authorized operators.
   /// @param approved True if the operators is approved, false to revoke approval
-  function setApprovalForAll(address operator, bool approved) external {
+  function setApprovalForAll(address operator, bool approved) public {
     accounts[msg.sender].approved_operator[operator] = approved;
     emit ApprovalForAll(msg.sender, operator, approved);
   }
